@@ -415,10 +415,41 @@ api.get('/orders/mine', authMiddleware, (req: AuthenticatedRequest, res) => {
   res.json({ orders });
 });
 
+// Track order by Order ID and Email (Public / Customer feature)
+api.post('/orders/track', (req, res) => {
+  try {
+    const { orderId, email } = req.body;
+    if (!orderId || !email) {
+      return res.status(400).json({ error: 'Please provide both your Order ID and the customer email address used during purchase.' });
+    }
+
+    const cleanId = String(orderId).trim();
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    const order = db.getOrderById(cleanId);
+    if (!order) {
+      return res.status(404).json({ error: `No order found with ID "${cleanId}". Please check your order confirmation details.` });
+    }
+
+    const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
+    if (orderEmail !== cleanEmail) {
+      return res.status(403).json({ error: 'The email address entered does not match the customer record on this order.' });
+    }
+
+    res.json({ order });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to track order.' });
+  }
+});
+
 // Get single order
 api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
-  const order = db.getOrderById(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found.' });
+  const cleanId = String(req.params.id || '').trim();
+  const order = db.getOrderById(cleanId);
+  if (!order) return res.status(404).json({ error: 'Order not found. Please verify the order ID.' });
+
+  const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : '';
+  const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
 
   if (req.user?.role === 'ADMIN') {
     return res.json({ order });
@@ -426,11 +457,14 @@ api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
   if (order.userId && req.user?.id === order.userId) {
     return res.json({ order });
   }
-  if (req.query.email && String(req.query.email).toLowerCase() === order.customerInformation.email.toLowerCase()) {
+  if (queryEmail && queryEmail === orderEmail) {
     return res.json({ order });
   }
-  if (order.userId && req.user?.id !== order.userId) {
-    return res.status(403).json({ error: 'Access denied to this order.' });
+  if (queryEmail && queryEmail !== orderEmail) {
+    return res.status(403).json({ error: 'The email address entered does not match the customer record on this order.' });
+  }
+  if (order.userId && req.user?.id !== order.userId && !queryEmail) {
+    return res.status(403).json({ error: 'Access denied. Please provide the customer email associated with this order.' });
   }
 
   res.json({ order });

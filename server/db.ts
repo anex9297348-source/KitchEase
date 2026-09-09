@@ -667,7 +667,9 @@ class Database {
   }
 
   getOrderById(id: string): Order | null {
-    return this.data.orders.find((o) => o.id === id) || null;
+    if (!id) return null;
+    const cleanId = id.trim().toLowerCase();
+    return this.data.orders.find((o) => o.id.toLowerCase() === cleanId) || null;
   }
 
   createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'timeline'>): Order {

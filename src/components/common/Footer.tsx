@@ -148,13 +148,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button
-                  onClick={() => {
-                    if (user) onNavigate('account');
-                    else openAuthModal('login');
-                  }}
+                  onClick={() => onNavigate('account', 'track')}
                   className="text-white/60 hover:text-[#D4AF37] transition-colors cursor-pointer font-light"
                 >
-                  Track My Orders
+                  Track My Order
                 </button>
               </li>
               <li>

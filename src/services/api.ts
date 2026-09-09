@@ -173,6 +173,13 @@ export const api = {
     return request<{ order: Order }>(`/api/orders/${id}${query}`);
   },
 
+  async trackOrder(orderId: string, email: string): Promise<{ order: Order }> {
+    return request<{ order: Order }>('/api/orders/track', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, email }),
+    });
+  },
+
   // Admin APIs (strictly requires ADMIN role)
   async getAdminStats(): Promise<{ stats: DashboardStats }> {
     return request<{ stats: DashboardStats }>('/api/admin/stats');

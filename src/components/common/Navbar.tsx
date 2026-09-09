@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, User, Shield, Menu, X, ChevronRight, Droplets } from 'lucide-react';
+import { ShoppingBag, User, Shield, Menu, X, ChevronRight, Droplets, Truck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { useCart } from '../../context/CartContext.tsx';
 import { useStore } from '../../context/StoreContext.tsx';
@@ -140,15 +140,26 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 </button>
               )}
 
+              {/* Track Order Button */}
+              <button
+                id="btn-nav-track-order"
+                onClick={() => onNavigate('account', 'track')}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
+                title="Track My Order"
+              >
+                <Truck className="w-4 h-4 text-[#D4AF37]" />
+                <span>Track Order</span>
+              </button>
+
               {/* Account Button */}
               <button
                 id="btn-nav-account"
                 onClick={handleAccountClick}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-[#D4AF37] hover:bg-white/5 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/70 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
                 title={user ? `Signed in as ${user.name}` : 'Account Login'}
               >
                 <User className="w-4 h-4 text-[#D4AF37]" />
-                <span className="hidden md:inline">
+                <span className="hidden lg:inline">
                   {user ? (user.role === 'ADMIN' ? 'Admin Portal' : user.name.split(' ')[0]) : 'Account'}
                 </span>
               </button>
@@ -264,6 +275,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onNavigate('account', 'track');
+                }}
+                className="flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-medium text-white/90 cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-[#D4AF37]" />
+                  <span>Track My Order</span>
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
 
               <button
                 onClick={() => {

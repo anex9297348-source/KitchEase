@@ -22,9 +22,12 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { useCart } from '../../context/CartContext.tsx';
 import { api } from '../../services/api.ts';
 import type { Order, OrderStatus } from '../../types.ts';
+import { TrackOrderSection } from './TrackOrderSection.tsx';
 
 interface CustomerDashboardProps {
-  onNavigate: (view: 'store' | 'admin' | 'account' | 'checkout' | 'confirmation') => void;
+  onNavigate: (view: 'store' | 'admin' | 'account' | 'checkout' | 'confirmation', sectionId?: string) => void;
+  initialTab?: 'orders' | 'track' | 'profile' | 'addresses' | 'wishlist' | 'support';
+  initialTrackOrderId?: string;
 }
 
 const STATUS_STEPS: OrderStatus[] = [
@@ -35,14 +38,33 @@ const STATUS_STEPS: OrderStatus[] = [
   'DELIVERED',
 ];
 
-export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate }) => {
+export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
+  onNavigate,
+  initialTab = 'orders',
+  initialTrackOrderId = '',
+}) => {
   const { user, logout, refreshUser, openAuthModal } = useAuth();
   const { addToCart } = useCart();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'profile' | 'addresses' | 'wishlist' | 'support'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'track' | 'profile' | 'addresses' | 'wishlist' | 'support'>(
+    initialTab
+  );
+  const [trackOrderId, setTrackOrderId] = useState<string>(initialTrackOrderId);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState<boolean>(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    if (initialTrackOrderId) {
+      setTrackOrderId(initialTrackOrderId);
+    }
+  }, [initialTrackOrderId]);
 
   // Profile Edit Form State
   const [name, setName] = useState(user?.name || '');
@@ -81,29 +103,50 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
 
   if (!user) {
     return (
-      <div className="min-h-[70vh] bg-[#0F0F0F] flex items-center justify-center p-4 text-[#EAEAEA]">
-        <div className="bg-[#151515] p-8 rounded-3xl border border-white/10 shadow-2xl max-w-md w-full text-center space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center mx-auto shadow-md">
-            <User className="w-7 h-7" />
+      <div className="min-h-screen bg-[#0F0F0F] py-8 sm:py-12 text-[#EAEAEA]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
+          {/* Top Welcome & Sign In Banner */}
+          <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shadow-md flex-shrink-0">
+                <Truck className="w-7 h-7" />
+              </div>
+              <div>
+                <span className="text-xs uppercase tracking-wider font-semibold text-[#D4AF37] block">
+                  Customer Portal &amp; Self-Service
+                </span>
+                <h1 className="font-display text-2xl sm:text-3xl font-normal text-[#EAEAEA]">
+                  Track My Order
+                </h1>
+                <p className="text-xs text-white/50 font-light mt-0.5">
+                  Input your Order ID and customer email to check real-time fulfillment and delivery status.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              <button
+                id="btn-guest-signin"
+                onClick={() => openAuthModal('login')}
+                className="px-4 py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer whitespace-nowrap shadow-md"
+              >
+                Sign In to Account
+              </button>
+              <button
+                onClick={() => onNavigate('store')}
+                className="px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Back to Store
+              </button>
+            </div>
           </div>
-          <h2 className="font-display text-2xl font-normal text-[#EAEAEA]">Customer Portal</h2>
-          <p className="text-xs text-white/50 font-light">
-            Please sign in to view your orders, live delivery tracking, and saved culinary profile.
-          </p>
-          <div className="pt-2 flex flex-col gap-2">
-            <button
-              onClick={() => openAuthModal('login')}
-              className="w-full py-3 px-4 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => onNavigate('store')}
-              className="w-full py-2.5 text-xs font-semibold text-white/60 hover:text-white transition-colors cursor-pointer"
-            >
-              Return to Store
-            </button>
-          </div>
+
+          {/* Real-Time Tracking Form Component */}
+          <TrackOrderSection
+            initialOrderId={trackOrderId}
+            defaultEmail=""
+            onNavigateSupport={() => onNavigate('store', 'faq-section')}
+          />
         </div>
       </div>
     );
@@ -218,6 +261,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
               </button>
 
               <button
+                id="tab-btn-track-order"
+                onClick={() => setActiveTab('track')}
+                className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
+                  activeTab === 'track'
+                    ? 'bg-[#D4AF37] text-black font-bold'
+                    : 'text-white/70 hover:bg-white/5'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Truck className="w-4 h-4" />
+                  <span>Track My Order</span>
+                </span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
                 onClick={() => setActiveTab('profile')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'profile'
@@ -294,6 +353,27 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
                   </button>
                 </div>
 
+                {/* Quick Banner to Track My Order */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-[#1A1A1A] to-[#151515] border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center flex-shrink-0">
+                      <Truck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white">Looking for another order or guest purchase?</p>
+                      <p className="text-[11px] text-white/50 font-light">Enter an Order ID and customer email to get real-time tracking.</p>
+                    </div>
+                  </div>
+                  <button
+                    id="btn-goto-track-order"
+                    onClick={() => setActiveTab('track')}
+                    className="px-3.5 py-2 rounded-lg bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                  >
+                    <span>Track Order</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
                 {loadingOrders ? (
                   <div className="p-12 text-center bg-[#151515] rounded-3xl border border-white/10 text-white/50 text-sm font-light">
                     Loading your culinary orders...
@@ -309,12 +389,20 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
                     <p className="text-xs text-white/50 max-w-sm mx-auto font-light">
                       Upgrade your kitchen with the KitchEase 2-in-1 oil dispenser. Fast tracked delivery on all orders.
                     </p>
-                    <button
-                      onClick={() => onNavigate('store')}
-                      className="px-6 py-3 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
-                    >
-                      Shop the KitchEase Dispenser
-                    </button>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => onNavigate('store')}
+                        className="px-6 py-3 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
+                      >
+                        Shop the KitchEase Dispenser
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('track')}
+                        className="px-6 py-3 rounded-md bg-white/5 border border-white/15 text-white font-semibold text-xs uppercase tracking-wider hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        Track an Order
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -351,7 +439,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
                         </div>
 
                         {/* Product info */}
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
                             <div className="w-16 h-16 rounded-xl bg-[#1A1A1A] overflow-hidden flex-shrink-0 border border-white/10 p-1 flex items-center justify-center">
                               <img
@@ -372,19 +460,43 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onNavigate
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => setSelectedOrder(ord)}
-                            className="px-4 py-2.5 rounded-md bg-white/5 border border-white/15 text-xs font-semibold uppercase tracking-wider text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <span>Track &amp; Details</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => {
+                                setTrackOrderId(ord.id);
+                                setActiveTab('track');
+                              }}
+                              className="px-3.5 py-2.5 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-xs font-semibold uppercase tracking-wider text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors flex items-center gap-1.5 cursor-pointer"
+                              title="Live Milestone Tracking"
+                            >
+                              <Truck className="w-3.5 h-3.5" />
+                              <span>Track Live</span>
+                            </button>
+
+                            <button
+                              onClick={() => setSelectedOrder(ord)}
+                              className="px-3.5 py-2.5 rounded-md bg-white/5 border border-white/15 text-xs font-semibold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span>Details</span>
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+            )}
+
+            {/* TAB: TRACK MY ORDER */}
+            {activeTab === 'track' && (
+              <TrackOrderSection
+                initialOrderId={trackOrderId}
+                defaultEmail={user.email}
+                recentOrders={orders}
+                onNavigateSupport={() => setActiveTab('support')}
+              />
             )}
 
             {/* TAB: PROFILE */}

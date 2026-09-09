@@ -25,6 +25,8 @@ type AppView = 'store' | 'admin' | 'account' | 'checkout' | 'confirmation';
 function MainApp() {
   const [currentView, setCurrentView] = useState<AppView>('store');
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const [accountInitialTab, setAccountInitialTab] = useState<'orders' | 'track' | 'profile' | 'addresses' | 'wishlist' | 'support'>('orders');
+  const [accountInitialOrderId, setAccountInitialOrderId] = useState<string | undefined>(undefined);
 
   // Sync with window.location hash for clean routing
   useEffect(() => {
@@ -32,6 +34,9 @@ function MainApp() {
       const hash = window.location.hash.replace('#', '').toLowerCase();
       if (hash.startsWith('admin')) {
         setCurrentView('admin');
+      } else if (hash.startsWith('track') || hash.startsWith('account/track')) {
+        setCurrentView('account');
+        setAccountInitialTab('track');
       } else if (hash.startsWith('account')) {
         setCurrentView('account');
       } else if (hash.startsWith('checkout')) {
@@ -50,7 +55,15 @@ function MainApp() {
 
   const navigateTo = (view: AppView, sectionId?: string) => {
     setCurrentView(view);
-    if (view === 'store') {
+    if (view === 'account') {
+      if (sectionId === 'track' || sectionId === 'track-order') {
+        setAccountInitialTab('track');
+        window.location.hash = 'account/track';
+      } else {
+        window.location.hash = 'account';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (view === 'store') {
       window.location.hash = '';
       if (sectionId) {
         setTimeout(() => {
@@ -68,6 +81,7 @@ function MainApp() {
 
   const handleOrderPlaced = (order: Order) => {
     setConfirmedOrder(order);
+    setAccountInitialOrderId(order.id);
     setCurrentView('confirmation');
     window.location.hash = 'confirmation';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -108,7 +122,11 @@ function MainApp() {
         )}
 
         {currentView === 'account' && (
-          <CustomerDashboard onNavigate={navigateTo} />
+          <CustomerDashboard
+            onNavigate={navigateTo}
+            initialTab={accountInitialTab}
+            initialTrackOrderId={accountInitialOrderId}
+          />
         )}
 
         {currentView === 'admin' && (
