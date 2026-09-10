@@ -58,16 +58,45 @@ export const api = {
     return res;
   },
 
+  async adminLogin(email: string, password: string): Promise<{ user: User; token: string }> {
+    const res = await request<{ user: User; token: string }>('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    setStoredToken(res.token);
+    return res;
+  },
+
+  async changeAdminPassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string; user: User; token: string }> {
+    const res = await request<{ success: boolean; message: string; user: User; token: string }>(
+      '/api/admin/change-password',
+      {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }
+    );
+    if (res.token) {
+      setStoredToken(res.token);
+    }
+    return res;
+  },
+
+  async getPrivacyPolicy(): Promise<{ privacyPolicy: string }> {
+    return request<{ privacyPolicy: string }>('/api/privacy-policy');
+  },
+
   async register(
     name: string,
     email: string,
     password: string,
-    phone?: string,
-    role?: 'ADMIN' | 'CUSTOMER'
+    phone?: string
   ): Promise<{ user: User; token: string }> {
     const res = await request<{ user: User; token: string }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password, phone, role }),
+      body: JSON.stringify({ name, email, password, phone }),
     });
     setStoredToken(res.token);
     return res;

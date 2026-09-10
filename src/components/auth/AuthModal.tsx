@@ -32,7 +32,7 @@ export const AuthModal: React.FC = () => {
       if (mode === 'login') {
         await login(email, password);
       } else {
-        await register(name, email, password, phone, role);
+        await register(name, email, password, phone);
       }
       closeAuthModal();
     } catch (err: any) {
@@ -40,20 +40,6 @@ export const AuthModal: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleQuickFillAdmin = () => {
-    setMode('login');
-    setEmail('admin@kitchease.com');
-    setPassword('admin123');
-    setError(null);
-  };
-
-  const handleQuickFillCustomer = () => {
-    setMode('login');
-    setEmail('sarah.cooks@example.com');
-    setPassword('customer123');
-    setError(null);
   };
 
   return (
@@ -71,36 +57,13 @@ export const AuthModal: React.FC = () => {
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="font-display text-2xl font-normal text-stone-900">
-            {mode === 'login' ? 'Sign In to KitchEase' : 'Create an Account'}
+            {mode === 'login' ? 'Customer Sign In' : 'Create an Account'}
           </h2>
           <p className="text-xs text-stone-500 font-light">
             {mode === 'login'
-              ? 'Access your orders, track shipments, or manage store operations'
-              : 'Join to track orders and save shipping preferences'}
+              ? 'Access your orders, track deliveries, and manage saved addresses'
+              : 'Join KitchEase to track orders and save shipping preferences'}
           </p>
-        </div>
-
-        {/* Quick Demo Fill Pills */}
-        <div className="p-3 bg-[#FAF8F5] rounded-2xl border border-stone-200 space-y-2">
-          <span className="text-[10px] font-semibold text-[#2A4B3C] uppercase tracking-wider block text-center">
-            Demo Credentials Quick Fill
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={handleQuickFillAdmin}
-              className="px-2.5 py-1.5 bg-white border border-stone-200 rounded-xl text-[11px] font-medium text-stone-800 hover:bg-[#2A4B3C] hover:text-white transition-colors cursor-pointer shadow-xs"
-            >
-              👑 Store Owner
-            </button>
-            <button
-              type="button"
-              onClick={handleQuickFillCustomer}
-              className="px-2.5 py-1.5 bg-white border border-stone-200 rounded-xl text-[11px] font-medium text-stone-800 hover:bg-[#2A4B3C] hover:text-white transition-colors cursor-pointer shadow-xs"
-            >
-              🛒 Demo Customer
-            </button>
-          </div>
         </div>
 
         {error && (

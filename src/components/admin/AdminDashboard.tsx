@@ -27,6 +27,11 @@ import {
   AlertCircle,
   ExternalLink,
   UploadCloud,
+  Lock,
+  Key,
+  AlertTriangle,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -58,7 +63,7 @@ interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
-  const { user, isAdmin, logout, openAuthModal, login } = useAuth();
+  const { user, isAdmin, logout, openAuthModal, login, adminLogin, changeAdminPassword } = useAuth();
   const { product, images, manual, reviews, settings, refreshAll } = useStore();
 
   const [activeTab, setActiveTab] = useState<
@@ -121,11 +126,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [supportPhone, setSupportPhone] = useState('');
   const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
 
-  // Admin login fallback state
-  const [adminEmail, setAdminEmail] = useState('admin@kitchease.com');
-  const [adminPass, setAdminPass] = useState('admin123');
+  // Admin login fallback state - never pre-fill credentials in client code
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPass, setAdminPass] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Forced Password Change Workflow State
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Check if admin is required to change their temporary initial password
+  useEffect(() => {
+    if (isAdmin && user?.mustChangePassword) {
+      setShowChangePasswordModal(true);
+    }
+  }, [isAdmin, user?.mustChangePassword]);
 
   // Initialize data
   useEffect(() => {
@@ -204,20 +225,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
   };
 
-  // Handle Admin Login if not authenticated
+  // Handle Admin Login with Server-Side Verification
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setIsLoggingIn(true);
     try {
-      const loggedUser = await login(adminEmail, adminPass);
+      const loggedUser = await adminLogin(adminEmail, adminPass);
       if (loggedUser.role !== 'ADMIN') {
-        setLoginError('Access denied: User does not possess Owner Admin privileges.');
+        setLoginError('Access denied: Account does not possess Store Owner privileges.');
       }
     } catch (err: any) {
-      setLoginError(err.message || 'Invalid admin credentials');
+      setLoginError(err.message || 'Invalid administrator credentials. Access restricted.');
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  // Handle Forced or Voluntary Admin Password Change
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeError(null);
+    setPasswordChangeSuccess(null);
+
+    if (newPassword.length < 8) {
+      setPasswordChangeError('New password must be at least 8 characters long.');
+      return;
+    }
+
+    if (newPassword === '9297348') {
+      setPasswordChangeError('You cannot reuse the default temporary setup password. Please select a unique, strong password.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordChangeError('New password and confirmation password do not match.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await changeAdminPassword(currentPassword, newPassword);
+      setPasswordChangeSuccess(res.message || 'Administrator password successfully secured!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowChangePasswordModal(false);
+        setPasswordChangeSuccess(null);
+      }, 1800);
+    } catch (err: any) {
+      setPasswordChangeError(err.message || 'Failed to update administrator password.');
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -233,18 +293,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               Owner Admin Portal
             </h2>
             <p className="text-xs text-white/50 font-light">
-              Strict role-based authorization required. Please authenticate with store owner credentials.
+              Server-authoritative portal for KitchEase store operations, inventory management, and customer order processing.
             </p>
           </div>
 
-          {/* Quick Helper Credentials */}
-          <div className="p-3.5 bg-[#1A1A1A] rounded-2xl border border-white/10 text-xs text-white/70 space-y-1">
-            <p className="font-bold text-[#D4AF37]">Default Store Owner Credentials:</p>
-            <p>
-              Email: <code className="font-mono text-white font-bold">admin@kitchease.com</code>
-            </p>
-            <p>
-              Password: <code className="font-mono text-white font-bold">admin123</code>
+          {/* Zero-Trust Security Gateway Notice */}
+          <div className="p-3.5 bg-[#1A1A1A] rounded-2xl border border-white/10 text-xs text-white/70 space-y-1.5">
+            <div className="flex items-center gap-2 text-[#D4AF37] font-semibold text-xs">
+              <Lock className="w-3.5 h-3.5" />
+              <span>Restricted Store Owner Area</span>
+            </div>
+            <p className="text-[11px] text-white/50 leading-relaxed">
+              Customer personal details (full address, phone number, order history) are protected by PBKDF2 encryption and strict server-side authorization. Normal customer accounts cannot access this portal.
             </p>
           </div>
 
@@ -257,10 +317,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Admin Email</label>
+              <label className="block text-xs font-medium text-white/70 mb-1">Store Owner Email / Username</label>
               <input
-                type="email"
+                type="text"
                 required
+                placeholder="admin@kitchease.com"
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
@@ -268,10 +329,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1">Password</label>
+              <label className="block text-xs font-medium text-white/70 mb-1">Admin Password</label>
               <input
                 type="password"
                 required
+                placeholder="••••••••"
                 value={adminPass}
                 onChange={(e) => setAdminPass(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
@@ -283,7 +345,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               disabled={isLoggingIn}
               className="w-full py-3 px-6 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors shadow-md disabled:opacity-50 cursor-pointer"
             >
-              {isLoggingIn ? 'Authenticating...' : 'Sign In as Owner'}
+              {isLoggingIn ? 'Verifying Credentials...' : 'Sign In to Admin Portal'}
             </button>
           </form>
 
@@ -511,6 +573,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-4 py-2.5 rounded-md bg-[#D4AF37]/10 border border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 text-[#D4AF37] text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Change Password</span>
+            </button>
+            <button
               onClick={() => onNavigate('store')}
               className="px-4 py-2.5 rounded-md bg-white/5 border border-white/15 hover:bg-white/10 text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
             >
@@ -529,6 +598,117 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             </button>
           </div>
         </div>
+
+        {/* Forced Password Change Notice Banner */}
+        {user?.mustChangePassword && (
+          <div className="mb-8 p-4 sm:p-5 rounded-3xl bg-amber-950/40 border border-amber-500/40 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-start sm:items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div>
+                <p className="text-sm font-bold text-amber-100">Mandatory Security Upgrade: Change Initial Password</p>
+                <p className="text-xs text-amber-200/80 mt-0.5">
+                  Your store owner account is currently using the initial setup password. For customer data privacy, you must update your password before leaving this session.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold whitespace-nowrap cursor-pointer transition-colors shadow-md"
+            >
+              Set New Password Now
+            </button>
+          </div>
+        )}
+
+        {/* Mandatory / Voluntary Admin Password Change Modal */}
+        {showChangePasswordModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#151515] border border-white/15 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-white space-y-6 relative animate-in fade-in zoom-in-95 duration-200">
+              {!user?.mustChangePassword && (
+                <button
+                  onClick={() => setShowChangePasswordModal(false)}
+                  className="absolute top-5 right-5 p-2 text-white/40 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center mx-auto mb-1 shadow-sm">
+                  <Key className="w-6 h-6" />
+                </div>
+                <h3 className="font-display text-2xl font-normal text-white">
+                  {user?.mustChangePassword ? 'Security Upgrade Required' : 'Update Admin Password'}
+                </h3>
+                <p className="text-xs text-white/50 leading-relaxed">
+                  {user?.mustChangePassword
+                    ? 'Your administrator account was activated using the initial setup code. Set a new private password (minimum 8 characters) to secure store access.'
+                    : 'Rotate your administrator credentials to maintain customer privacy and store security.'}
+                </p>
+              </div>
+
+              {passwordChangeError && (
+                <div className="p-3 rounded-xl bg-red-950/50 border border-red-800 text-red-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{passwordChangeError}</span>
+                </div>
+              )}
+
+              {passwordChangeSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
+                  <Check className="w-4 h-4 flex-shrink-0" />
+                  <span>{passwordChangeSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-white/70 mb-1">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-white/70 mb-1">New Password (min 8 characters)</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new strong password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-white/70 mb-1">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Re-type new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="w-full py-3 px-6 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors shadow-md disabled:opacity-50 cursor-pointer mt-2"
+                >
+                  {isChangingPassword ? 'Securing Account...' : 'Set New Admin Password'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Dashboard Layout: Sidebar + Stage */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

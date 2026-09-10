@@ -8,7 +8,9 @@ interface AuthContextType {
   isAdmin: boolean;
   isCustomer: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (name: string, email: string, password: string, phone?: string, role?: UserRole) => Promise<User>;
+  adminLogin: (email: string, password: string) => Promise<User>;
+  changeAdminPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string; user: User }>;
+  register: (name: string, email: string, password: string, phone?: string) => Promise<User>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   authModalOpen: boolean;
@@ -55,8 +57,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.user;
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string, role?: UserRole) => {
-    const res = await api.register(name, email, password, phone, role);
+  const adminLogin = async (email: string, password: string) => {
+    const res = await api.adminLogin(email, password);
+    setUser(res.user);
+    return res.user;
+  };
+
+  const changeAdminPassword = async (currentPassword: string, newPassword: string) => {
+    const res = await api.changeAdminPassword(currentPassword, newPassword);
+    setUser(res.user);
+    return res;
+  };
+
+  const register = async (name: string, email: string, password: string, phone?: string) => {
+    const res = await api.register(name, email, password, phone);
     setUser(res.user);
     return res.user;
   };
@@ -84,6 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: user?.role === 'ADMIN',
         isCustomer: !!user,
         login,
+        adminLogin,
+        changeAdminPassword,
         register,
         logout,
         refreshUser,

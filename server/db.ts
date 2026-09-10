@@ -11,6 +11,7 @@ import type {
   SiteSettings,
   DashboardStats,
   OrderStatus,
+  CustomerInformation,
 } from '../src/types.js';
 
 interface DatabaseSchema {
@@ -27,15 +28,30 @@ const DATA_DIR = isServerless ? '/tmp/kitchease-data' : path.resolve(process.cwd
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SEED_FILE = path.resolve(process.cwd(), 'data', 'db.json');
 
-function hashPassword(password: string, salt?: string) {
+function hashPassword(password: string, salt?: string, iterations = 100000) {
   const s = salt || crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, s, 1000, 64, 'sha512').toString('hex');
+  const hash = crypto.pbkdf2Sync(password, s, iterations, 64, 'sha512').toString('hex');
   return { hash, salt: s };
 }
 
 function verifyPassword(password: string, hash: string, salt: string) {
-  const reHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return reHash === hash;
+  // Check standard 100,000 iterations
+  const hash100k = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  try {
+    if (crypto.timingSafeEqual(Buffer.from(hash100k, 'hex'), Buffer.from(hash, 'hex'))) {
+      return true;
+    }
+  } catch {
+    // Proceed to fallback
+  }
+
+  // Fallback check for legacy 1,000 iterations
+  const hash1k = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hash1k, 'hex'), Buffer.from(hash, 'hex'));
+  } catch {
+    return false;
+  }
 }
 
 const initialImages: ProductImage[] = [
@@ -428,6 +444,44 @@ const initialOrders: Order[] = [
   },
 ];
 
+export const defaultPrivacyPolicy = `KitchEase Privacy Policy & Customer Data Protection
+
+Last Updated: September 2026
+
+At KitchEase, we respect and safeguard the private personal information of every customer who purchases our 2-in-1 kitchen oil dispenser and sprayer. This Privacy Policy details how customer information is collected, processed, and protected under strict privacy safeguards.
+
+1. Information We Collect
+When placing an order on KitchEase, we only collect the essential information required to process fulfillment and dispatch delivery:
+• Recipient Full Name
+• Delivery Street Address, City, State, and Postal Code / Pincode
+• Contact Phone Number (used exclusively for courier delivery coordination and SMS delivery updates)
+• Email Address (used exclusively for sending order receipts and live tracking links)
+
+We do NOT collect, process, or store payment card numbers, CVVs, net banking credentials, or government identification numbers.
+
+2. Purpose and Use of Customer Data
+Your personal data is used solely for legitimate order fulfillment purposes:
+• Processing and assembling your KitchEase order
+• Generating accurate courier shipping labels and manifests
+• Transmitting automated dispatch notifications and tracking updates
+• Providing customer service assistance, returns, or warranty replacements (1-year manufacturer warranty)
+
+3. Strict Address & Phone Privacy Safeguards
+• Zero Public Address Exposure: Customer delivery addresses and phone numbers are strictly confidential and are never published or made searchable to the public or other customers.
+• Masked Order Tracking: Public self-service tracking requires dual verification (Order ID and customer email address). To prevent reconnaissance, delivery street addresses and contact phone numbers are automatically masked on tracking screens.
+• Role-Based Access Control: Full delivery addresses can only be accessed by authenticated and authorized store administrators for order fulfillment.
+
+4. Third-Party Disclosures
+We never sell, rent, monetize, or trade your personal information with advertising brokers or data aggregators. Customer shipping data is disclosed strictly to:
+• Licensed domestic logistics and courier delivery partners solely for completing door-to-door physical parcel delivery.
+• Transaction notification service providers for sending delivery milestone alerts.
+
+5. Data Retention & Customer Rights
+Order records are retained securely in encrypted storage for warranty verification and transaction accounting. You have the right to request access to, correction of, or deletion of your personal data at any time.
+
+6. Contact Our Privacy Officer
+For any privacy inquiries, data deletion requests, or questions regarding our security protocols, please contact our support team at privacy@kitchease.com or support@kitchease.com.`;
+
 const initialSiteSettings: SiteSettings = {
   announcement: '✨ Limited Time Offer: 40% OFF + FREE Worldwide Shipping Today Only!',
   supportEmail: 'support@kitchease.com',
@@ -435,7 +489,53 @@ const initialSiteSettings: SiteSettings = {
   freeShippingThreshold: 0,
   currencySymbol: '$',
   allowGuestCheckout: true,
+  privacyPolicy: defaultPrivacyPolicy,
 };
+
+export function maskCustomerInformation(info: CustomerInformation): CustomerInformation {
+  if (!info) {
+    return {
+      fullName: 'Customer',
+      email: '***@kitchease.com',
+      phone: '***',
+      address: '*** (Street Address Hidden for Customer Privacy)',
+      city: '',
+      state: '',
+      postalCode: '***',
+    };
+  }
+
+  const nameParts = (info.fullName || 'Customer').trim().split(' ');
+  const maskedName = nameParts
+    .map((p) => (p.length > 1 ? p[0] + '*'.repeat(Math.min(3, p.length - 1)) : p))
+    .join(' ');
+
+  const emailParts = (info.email || '').split('@');
+  const userPart = emailParts[0] || '';
+  const domainPart = emailParts[1] || 'customer.com';
+  const maskedEmail =
+    userPart.length > 2
+      ? userPart[0] + '***' + userPart[userPart.length - 1] + '@' + domainPart
+      : '***@' + domainPart;
+
+  const rawPhone = (info.phone || '').trim();
+  const digitsOnly = rawPhone.replace(/\D/g, '');
+  const last4 = digitsOnly.slice(-4);
+  const maskedPhone = digitsOnly.length >= 4 ? `+1 (***) ***-${last4}` : '***';
+
+  const rawZip = (info.postalCode || '').trim();
+  const maskedZip = rawZip.length > 2 ? rawZip.slice(0, 2) + '***' : '***';
+
+  return {
+    fullName: maskedName,
+    email: maskedEmail,
+    phone: maskedPhone,
+    address: '*** (Street Address Hidden for Customer Privacy)',
+    city: info.city,
+    state: info.state,
+    postalCode: maskedZip,
+  };
+}
 
 class Database {
   private data: DatabaseSchema;
@@ -471,10 +571,47 @@ class Database {
       this.data = this.getDefaultData();
       this.save();
     }
+
+    // Security Migration & Integrity Check: Ensure store owner initial password and privacy policy exist
+    let modified = false;
+    const adminUser = this.data.users.find((u) => u.role === 'ADMIN');
+    if (adminUser) {
+      if (adminUser.mustChangePassword === undefined) {
+        const initialPass = hashPassword('9297348');
+        adminUser.passwordHash = initialPass.hash;
+        adminUser.salt = initialPass.salt;
+        adminUser.mustChangePassword = true;
+        modified = true;
+      }
+    } else {
+      // Seed admin if missing
+      const initialPass = hashPassword('9297348');
+      this.data.users.unshift({
+        id: 'user-admin-owner',
+        name: 'KitchEase Store Owner',
+        email: 'admin@kitchease.com',
+        phone: '+1 (800) 548-2432',
+        role: 'ADMIN',
+        createdAt: '2026-08-01T00:00:00Z',
+        passwordHash: initialPass.hash,
+        salt: initialPass.salt,
+        mustChangePassword: true,
+      });
+      modified = true;
+    }
+
+    if (!this.data.siteSettings.privacyPolicy) {
+      this.data.siteSettings.privacyPolicy = defaultPrivacyPolicy;
+      modified = true;
+    }
+
+    if (modified) {
+      this.save();
+    }
   }
 
   private getDefaultData(): DatabaseSchema {
-    const adminPass = hashPassword('admin123');
+    const adminPass = hashPassword('9297348');
     const customerPass = hashPassword('customer123');
 
     const adminUser: User & { passwordHash: string; salt: string } = {
@@ -486,6 +623,7 @@ class Database {
       createdAt: '2026-08-01T00:00:00Z',
       passwordHash: adminPass.hash,
       salt: adminPass.salt,
+      mustChangePassword: true,
     };
 
     const customerUser: User & { passwordHash: string; salt: string } = {
@@ -532,7 +670,12 @@ class Database {
 
   // Users
   getUserByEmail(email: string) {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!email) return null;
+    const clean = email.trim().toLowerCase();
+    if (clean === 'anex9297348@gmail.com' || clean === 'admin' || clean === 'owner') {
+      return this.data.users.find((u) => u.role === 'ADMIN') || null;
+    }
+    return this.data.users.find((u) => u.email.toLowerCase() === clean) || null;
   }
 
   getUserById(id: string) {
@@ -563,6 +706,7 @@ class Database {
       wishlist: [],
       passwordHash: hash,
       salt,
+      mustChangePassword: role === 'ADMIN',
     };
     this.data.users.push(newUser);
     this.save();
@@ -614,6 +758,37 @@ class Database {
     if (!valid) return null;
     const { passwordHash, salt, ...safeUser } = user;
     return safeUser;
+  }
+
+  changeAdminPassword(userId: string, currentPass: string, newPass: string): { success: boolean; error?: string } {
+    const userIndex = this.data.users.findIndex((u) => u.id === userId && u.role === 'ADMIN');
+    if (userIndex === -1) {
+      return { success: false, error: 'Administrator user account not found.' };
+    }
+    const user = this.data.users[userIndex];
+    const isCurrentValid = verifyPassword(currentPass, user.passwordHash, user.salt);
+    if (!isCurrentValid) {
+      return { success: false, error: 'Current password is incorrect. Please re-enter your current password.' };
+    }
+
+    const cleanNewPass = (newPass || '').trim();
+    if (cleanNewPass.length < 8) {
+      return { success: false, error: 'New password must be at least 8 characters long.' };
+    }
+    if (cleanNewPass === '9297348') {
+      return { success: false, error: 'New password cannot be the temporary initial setup password (9297348).' };
+    }
+    if (cleanNewPass === currentPass) {
+      return { success: false, error: 'New password must be different from your existing password.' };
+    }
+
+    const { hash, salt } = hashPassword(cleanNewPass);
+    user.passwordHash = hash;
+    user.salt = salt;
+    user.mustChangePassword = false;
+    this.save();
+
+    return { success: true };
   }
 
   // Product

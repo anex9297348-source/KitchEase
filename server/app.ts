@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { db } from './db.ts';
+import { db, maskCustomerInformation, defaultPrivacyPolicy } from './db.ts';
 import type { User, OrderStatus } from '../src/types.ts';
 
 const app = express();
@@ -11,25 +11,79 @@ const TOKEN_SECRET = process.env.TOKEN_SECRET || 'kitchease-ultra-secure-key-202
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORS headers for serverless / cross-domain preview flexibility
+// Strict Security Headers & Anti-Sniffing
 app.use((_req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// CORS headers for serverless / cross-domain preview flexibility
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (_req.method === 'OPTIONS') {
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
 
-// Helper to sign a lightweight auth token
+// In-memory rate limiter to prevent credential brute-force and scraping
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+function createRateLimiter(windowMs: number, maxRequests: number, message: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'client';
+    const key = `${req.baseUrl || req.path}:${ip}`;
+    const now = Date.now();
+
+    const entry = rateLimitStore.get(String(key));
+    if (!entry || now > entry.resetTime) {
+      rateLimitStore.set(String(key), { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    entry.count++;
+    if (entry.count > maxRequests) {
+      const retryAfterSec = Math.ceil((entry.resetTime - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfterSec));
+      return res.status(429).json({
+        error: message,
+        retryAfter: retryAfterSec,
+      });
+    }
+    next();
+  };
+}
+
+const loginLimiter = createRateLimiter(15 * 60 * 1000, 8, 'Too many login attempts. Please wait 15 minutes before trying again.');
+const orderLimiter = createRateLimiter(10 * 60 * 1000, 20, 'Order creation limit reached. Please try again shortly.');
+const trackLimiter = createRateLimiter(10 * 60 * 1000, 25, 'Too many tracking requests. Please wait a few minutes.');
+
+// Helper to sign a lightweight auth token with strict role-based expiration
 function generateToken(user: User): string {
+  // 4 hours for store admins, 24 hours for normal customers
+  const durationMs = user.role === 'ADMIN' ? 1000 * 60 * 60 * 4 : 1000 * 60 * 60 * 24;
   const payload = {
     id: user.id,
     email: user.email,
     role: user.role,
     name: user.name,
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+    mustChangePassword: user.mustChangePassword,
+    exp: Date.now() + durationMs,
   };
   const str = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', TOKEN_SECRET).update(str).digest('base64url');
@@ -105,10 +159,10 @@ api.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'KitchEase API', timestamp: new Date().toISOString() });
 });
 
-// 1. Auth routes
+// 1. Auth routes (Customer & Admin)
 api.post('/auth/register', (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required.' });
     }
@@ -116,8 +170,8 @@ api.post('/auth/register', (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
-    const assignedRole = role === 'ADMIN' ? 'ADMIN' : 'CUSTOMER';
-    const user = db.createUser(name.trim(), email.trim(), password, assignedRole, phone);
+    // PRIVACY ENFORCEMENT: Public registration is strictly restricted to CUSTOMER role
+    const user = db.createUser(name.trim(), email.trim(), password, 'CUSTOMER', phone);
     const token = generateToken(user);
     res.status(201).json({ user, token });
   } catch (err: any) {
@@ -125,7 +179,7 @@ api.post('/auth/register', (req, res) => {
   }
 });
 
-api.post('/auth/login', (req, res) => {
+api.post('/auth/login', loginLimiter, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -136,6 +190,48 @@ api.post('/auth/login', (req, res) => {
   }
   const token = generateToken(user);
   res.json({ user, token });
+});
+
+// Dedicated Secure Admin Login with Brute-Force Rate Limiting
+api.post('/admin/login', loginLimiter, (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Store Owner credentials are required.' });
+  }
+  const user = db.authenticate(email.trim(), password);
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(401).json({ error: 'Invalid store owner credentials or unauthorized account.' });
+  }
+  const token = generateToken(user);
+  res.json({ user, token });
+});
+
+// Admin Forced / Scheduled Password Update
+api.post('/admin/change-password', adminMiddleware, (req: AuthenticatedRequest, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required.' });
+  }
+
+  const result = db.changeAdminPassword(req.user!.id, currentPassword, newPassword);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error || 'Failed to update administrator password.' });
+  }
+
+  const updatedUser = db.getUserById(req.user!.id);
+  const token = generateToken(updatedUser!);
+  res.json({
+    success: true,
+    message: 'Administrator password successfully updated.',
+    user: updatedUser,
+    token,
+  });
+});
+
+// Privacy Policy Endpoint
+api.get('/privacy-policy', (_req, res) => {
+  const settings = db.getSiteSettings();
+  res.json({ privacyPolicy: settings.privacyPolicy || defaultPrivacyPolicy });
 });
 
 api.get('/auth/me', authMiddleware, (req: AuthenticatedRequest, res) => {
@@ -221,7 +317,7 @@ api.delete('/admin/images/:id', adminMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-api.post('/admin/upload-image', optionalAuth, (req, res) => {
+api.post('/admin/upload-image', adminMiddleware, (req, res) => {
   try {
     const { base64Data, filename, targetSlot, caption, alt, isMain } = req.body;
     if (!base64Data) {
@@ -305,7 +401,7 @@ api.post('/admin/upload-image', optionalAuth, (req, res) => {
   }
 });
 
-api.post('/admin/upload-batch-images', optionalAuth, (req, res) => {
+api.post('/admin/upload-batch-images', adminMiddleware, (req, res) => {
   try {
     const { images } = req.body;
     if (!Array.isArray(images) || images.length === 0) {
@@ -363,64 +459,89 @@ api.post('/admin/upload-batch-images', optionalAuth, (req, res) => {
 });
 
 // 4. Orders
-api.post('/orders', optionalAuth, (req: AuthenticatedRequest, res) => {
+api.post('/orders', orderLimiter, optionalAuth, (req: AuthenticatedRequest, res) => {
   try {
-    const { quantity, customerInformation, discount } = req.body;
-    if (!quantity || quantity < 1) {
-      return res.status(400).json({ error: 'Order quantity must be at least 1.' });
-    }
-    if (
-      !customerInformation ||
-      !customerInformation.fullName ||
-      !customerInformation.email ||
-      !customerInformation.address ||
-      !customerInformation.city ||
-      !customerInformation.state ||
-      !customerInformation.postalCode
-    ) {
-      return res.status(400).json({ error: 'All shipping details are required.' });
+    const { quantity, customerInformation, promoCode } = req.body;
+    const parsedQty = Math.floor(Number(quantity) || 0);
+    if (parsedQty < 1 || parsedQty > 100) {
+      return res.status(400).json({ error: 'Order quantity must be between 1 and 100 bottles.' });
     }
 
+    if (
+      !customerInformation ||
+      !customerInformation.fullName?.trim() ||
+      !customerInformation.email?.trim() ||
+      !customerInformation.address?.trim() ||
+      !customerInformation.city?.trim() ||
+      !customerInformation.state?.trim() ||
+      !customerInformation.postalCode?.trim()
+    ) {
+      return res.status(400).json({ error: 'All delivery and shipping details are required.' });
+    }
+
+    // SANITIZATION & SECURITY: Compute canonical prices strictly server-side (prevent price tampering)
     const product = db.getProduct();
-    const qty = Number(quantity);
-    const unitPrice = product.price;
-    const disc = Number(discount) || 0;
-    const subtotal = unitPrice * qty;
-    const shipping = 0; // free shipping promotion
-    const total = Math.max(0, Math.round((subtotal - disc + shipping) * 100) / 100);
+    const unitPrice = product.price; // Server-authoritative unit price (e.g. 29.99)
+    const subtotal = Math.round(unitPrice * parsedQty * 100) / 100;
+
+    // Server-side volume discount rules
+    let discount = 0;
+    if (parsedQty >= 3) {
+      discount = 10; // Bundle discount for 3+ units
+    } else if (parsedQty === 2) {
+      discount = 5; // Bundle discount for 2 units
+    }
+
+    // Optional verified coupon promo code
+    if (promoCode && String(promoCode).trim().toUpperCase() === 'KITCHEN10') {
+      discount = Math.max(discount, Math.round(subtotal * 0.1 * 100) / 100);
+    }
+
+    const shipping = 0; // Promotional Free Insured Shipping
+    const total = Math.max(0, Math.round((subtotal - discount + shipping) * 100) / 100);
+
+    const sanitizedCustomerInfo = {
+      fullName: customerInformation.fullName.trim(),
+      email: customerInformation.email.trim().toLowerCase(),
+      phone: customerInformation.phone ? customerInformation.phone.trim() : '',
+      address: customerInformation.address.trim(),
+      city: customerInformation.city.trim(),
+      state: customerInformation.state.trim(),
+      postalCode: customerInformation.postalCode.trim(),
+    };
 
     const order = db.createOrder({
       userId: req.user ? req.user.id : undefined,
       productId: product.id,
       productName: product.name,
       productImage: product.images.find((i) => i.isMain)?.url || product.images[0]?.url || '/images/hero.jpg',
-      quantity: qty,
+      quantity: parsedQty,
       unitPrice,
-      discount: disc,
+      discount,
       shipping,
       total,
-      customerInformation,
+      customerInformation: sanitizedCustomerInfo,
       status: 'Pending',
     });
 
     res.status(201).json({ order });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Could not create order' });
+    res.status(500).json({ error: err.message || 'Could not process order.' });
   }
 });
 
-// Customer: My Orders
+// Customer: My Orders (Restricted to Authenticated Customer)
 api.get('/orders/mine', authMiddleware, (req: AuthenticatedRequest, res) => {
   const orders = db.getOrdersByUser(req.user!.id);
   res.json({ orders });
 });
 
-// Track order by Order ID and Email (Public / Customer feature)
-api.post('/orders/track', (req, res) => {
+// Track order by Order ID and Email (Public safe lookup with rate limiting and address masking)
+api.post('/orders/track', trackLimiter, (req, res) => {
   try {
     const { orderId, email } = req.body;
     if (!orderId || !email) {
-      return res.status(400).json({ error: 'Please provide both your Order ID and the customer email address used during purchase.' });
+      return res.status(400).json({ error: 'Please provide both your Order ID and the customer email address used during checkout.' });
     }
 
     const cleanId = String(orderId).trim();
@@ -428,7 +549,7 @@ api.post('/orders/track', (req, res) => {
 
     const order = db.getOrderById(cleanId);
     if (!order) {
-      return res.status(404).json({ error: `No order found with ID "${cleanId}". Please check your order confirmation details.` });
+      return res.status(404).json({ error: `No order found with ID "${cleanId}". Please verify your confirmation details.` });
     }
 
     const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
@@ -436,13 +557,19 @@ api.post('/orders/track', (req, res) => {
       return res.status(403).json({ error: 'The email address entered does not match the customer record on this order.' });
     }
 
-    res.json({ order });
+    // PRIVACY ENFORCEMENT: Mask street address and phone number to protect customer privacy
+    const maskedOrder = {
+      ...order,
+      customerInformation: maskCustomerInformation(order.customerInformation),
+    };
+
+    res.json({ order: maskedOrder, maskedForPrivacy: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to track order.' });
   }
 });
 
-// Get single order
+// Get single order (Strict Server Authorization)
 api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
   const cleanId = String(req.params.id || '').trim();
   const order = db.getOrderById(cleanId);
@@ -451,23 +578,29 @@ api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
   const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : '';
   const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
 
+  // 1. Full unmasked order access ONLY for authenticated Store Admins
   if (req.user?.role === 'ADMIN') {
     return res.json({ order });
   }
-  if (order.userId && req.user?.id === order.userId) {
+
+  // 2. Full order access for the logged-in customer who placed it
+  if (req.user && order.userId && req.user.id === order.userId) {
     return res.json({ order });
-  }
-  if (queryEmail && queryEmail === orderEmail) {
-    return res.json({ order });
-  }
-  if (queryEmail && queryEmail !== orderEmail) {
-    return res.status(403).json({ error: 'The email address entered does not match the customer record on this order.' });
-  }
-  if (order.userId && req.user?.id !== order.userId && !queryEmail) {
-    return res.status(403).json({ error: 'Access denied. Please provide the customer email associated with this order.' });
   }
 
-  res.json({ order });
+  // 3. Customer tracking with matching email verification: returns MASKED customer details for privacy
+  if (queryEmail && queryEmail === orderEmail) {
+    const maskedOrder = {
+      ...order,
+      customerInformation: maskCustomerInformation(order.customerInformation),
+    };
+    return res.json({ order: maskedOrder, maskedForPrivacy: true });
+  }
+
+  // 4. Any unauthorized attempt to view another customer's order is strictly rejected
+  return res.status(403).json({
+    error: 'Access denied. Viewing order details requires administrator login or order owner email verification.',
+  });
 });
 
 // Admin: View All Orders

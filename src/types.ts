@@ -20,6 +20,7 @@ export interface User {
   createdAt: string;
   addresses?: UserAddress[];
   wishlist?: string[];
+  mustChangePassword?: boolean;
 }
 
 export interface ProductImage {
@@ -151,6 +152,7 @@ export interface SiteSettings {
   freeShippingThreshold: number;
   currencySymbol: string;
   allowGuestCheckout: boolean;
+  privacyPolicy?: string;
 }
 
 export interface DashboardStats {

@@ -17,6 +17,7 @@ import {
   Check,
   Loader2,
   HelpCircle,
+  Lock,
 } from 'lucide-react';
 import { api } from '../../services/api.ts';
 import type { Order, OrderStatus } from '../../types.ts';
@@ -515,10 +516,16 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
             <div className="lg:col-span-5 space-y-6">
               {/* Shipping Address Card */}
               <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm space-y-4">
-                <h3 className="font-display text-lg font-normal text-stone-900 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#2A4B3C]" />
-                  <span>Delivery Destination</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-lg font-normal text-stone-900 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#2A4B3C]" />
+                    <span>Delivery Destination</span>
+                  </h3>
+                  <span className="px-2.5 py-1 rounded-full bg-[#2A4B3C]/10 text-[#2A4B3C] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-[#2A4B3C]/20">
+                    <Lock className="w-3 h-3" />
+                    <span>Privacy Masked</span>
+                  </span>
+                </div>
 
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 space-y-2 text-xs">
                   <div>
@@ -530,25 +537,32 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
 
                   <div>
                     <span className="text-stone-400 block text-[10px] uppercase tracking-wider font-semibold">Shipping Address</span>
-                    <p className="text-stone-700 font-light">
+                    <p className="text-stone-700 font-light font-mono text-xs">
                       {trackedOrder.customerInformation.address}
                     </p>
                     <p className="text-stone-700 font-light">
                       {trackedOrder.customerInformation.city}, {trackedOrder.customerInformation.state}{' '}
-                      {trackedOrder.customerInformation.postalCode}
+                      <span className="font-mono">{trackedOrder.customerInformation.postalCode}</span>
                     </p>
                   </div>
 
                   <div className="pt-2 border-t border-stone-200 space-y-1">
-                    <p className="text-stone-600 font-light flex items-center gap-1.5">
+                    <p className="text-stone-600 font-light flex items-center gap-1.5 font-mono text-xs">
                       <Mail className="w-3.5 h-3.5 text-stone-400" />
                       <span>{trackedOrder.customerInformation.email}</span>
                     </p>
                     {trackedOrder.customerInformation.phone && (
-                      <p className="text-stone-600 font-light flex items-center gap-1.5">
+                      <p className="text-stone-600 font-light flex items-center gap-1.5 font-mono text-xs">
                         <span>📞 {trackedOrder.customerInformation.phone}</span>
                       </p>
                     )}
+                  </div>
+
+                  <div className="pt-2 border-t border-stone-200">
+                    <p className="text-[10px] text-stone-400 flex items-center gap-1.5 leading-tight">
+                      <Lock className="w-3 h-3 text-[#2A4B3C] flex-shrink-0" />
+                      <span>Full address and phone number are automatically masked to safeguard customer privacy.</span>
+                    </p>
                   </div>
                 </div>
 
