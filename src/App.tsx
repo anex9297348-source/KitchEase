@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { StoreProvider, useStore } from './context/StoreContext.tsx';
-import { CartProvider, useCart } from './context/CartContext.tsx';
+import { AuthProvider } from './context/AuthContext.tsx';
+import { StoreProvider } from './context/StoreContext.tsx';
+import { CartProvider } from './context/CartContext.tsx';
 import { Navbar } from './components/common/Navbar.tsx';
 import { Footer } from './components/common/Footer.tsx';
 import { Hero } from './components/public/Hero.tsx';
-import { ProductGallery } from './components/public/ProductGallery.tsx';
 import { ProductDetails } from './components/public/ProductDetails.tsx';
 import { Features } from './components/public/Features.tsx';
+import { ProductDemo } from './components/public/ProductDemo.tsx';
 import { HowItWorks } from './components/public/HowItWorks.tsx';
+import { ProductGallery } from './components/public/ProductGallery.tsx';
 import { UserManualSection } from './components/public/UserManualSection.tsx';
-import { ReviewsSection } from './components/public/ReviewsSection.tsx';
+import { WhyKitchEase } from './components/public/WhyKitchEase.tsx';
 import { FAQSection } from './components/public/FAQSection.tsx';
+import { FinalCTA } from './components/public/FinalCTA.tsx';
 import { CartDrawer } from './components/cart/CartDrawer.tsx';
 import { CheckoutView } from './components/checkout/CheckoutView.tsx';
 import { OrderConfirmationView } from './components/checkout/OrderConfirmationView.tsx';
@@ -88,7 +90,7 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0F0F0F] text-[#EAEAEA] selection:bg-[#D4AF37] selection:text-black font-sans antialiased">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-stone-900 selection:bg-[#2A4B3C] selection:text-white font-sans antialiased">
       {/* Sticky Global Navigation */}
       <Navbar currentView={currentView} onNavigate={navigateTo} />
 
@@ -96,14 +98,35 @@ function MainApp() {
       <main className="flex-1">
         {currentView === 'store' && (
           <>
+            {/* 1. Hero & Trust Strip */}
             <Hero onNavigate={navigateTo} />
+
+            {/* 2. Product Details & Purchase Section */}
             <ProductDetails onNavigate={navigateTo} />
+
+            {/* 3. Benefit Highlights */}
             <Features />
+
+            {/* 4. Interactive Demo / Dual Function Showcase */}
+            <ProductDemo />
+
+            {/* 5. How It Works */}
             <HowItWorks />
+
+            {/* 6. Real Product Gallery with Lightbox */}
             <ProductGallery />
+
+            {/* 7. Complete User Manual & Maintenance Guide */}
             <UserManualSection />
-            <ReviewsSection />
+
+            {/* 8. Why KitchEase */}
+            <WhyKitchEase />
+
+            {/* 9. FAQ Accordion */}
             <FAQSection />
+
+            {/* 10. Final CTA Section */}
+            <FinalCTA onNavigate={navigateTo} />
           </>
         )}
 

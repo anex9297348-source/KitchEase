@@ -1,103 +1,109 @@
 import React from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export const HowItWorks: React.FC = () => {
   const steps = [
     {
-      number: '01',
-      title: 'Fill with Your Favorite Oil',
-      subtitle: 'STEP 1: FILL',
+      stepLabel: 'STEP 1 — FILL',
+      title: 'Add your preferred cooking oil.',
       description:
-        'Unscrew the wide-mouth lid and pour up to 470ml of olive, avocado, or sesame oil directly into the glass carafe.',
+        'Unscrew the wide-mouth dispenser and pour in your chosen oil—olive, avocado, canola, or sesame. The generous opening prevents drips without needing a funnel.',
       image: '/images/pour.jpg',
+      alt: 'Pouring oil into wide-mouth KitchEase dispenser bottle',
       highlight: 'Wide opening, zero funnel mess',
     },
     {
-      number: '02',
-      title: 'Secure the Hermetic Seal',
-      subtitle: 'STEP 2: CLOSE',
+      stepLabel: 'STEP 2 — CLOSE',
+      title: 'Secure the bottle properly.',
       description:
-        'Twist the ergonomic pump lid clockwise until snug. The internal silicone seal locks in freshness and creates airtight pressure.',
+        'Twist the ergonomic lid clockwise until firmly seated to engage the food-grade airtight silicone seal. This preserves oil freshness and guarantees leak-proof cooking.',
       image: '/images/hero.jpg',
-      highlight: 'Airtight leak-proof gasket',
+      alt: 'Securing top lid on KitchEase glass bottle',
+      highlight: 'Airtight leak-proof seal',
     },
     {
-      number: '03',
-      title: 'Press the Ergonomic Lever',
-      subtitle: 'STEP 3: PRESS / PUMP',
+      stepLabel: 'STEP 3 — USE',
+      title: 'Spray or pour according to your cooking needs.',
       description:
-        'Place your thumb on the top button. A rapid, decisive push pressurizes the mechanical chamber instantly without batteries.',
+        'Depress the top lever with a quick, firm motion for a broad, uniform mist cloud, or simply tilt the bottle over your pan for a steady, drip-free culinary pour.',
+      image: '/images/oil_spray_action_1788685889614.jpg',
+      alt: 'Spraying or pouring oil onto cooking pan',
+      highlight: 'Seamless dual-action choice',
+    },
+    {
+      stepLabel: 'STEP 4 — CLEAN',
+      title: 'Clean the bottle and nozzle regularly.',
+      description:
+        'Disassemble the bottle in seconds. Rinse with warm soapy water and use the included custom bottle brush. Flush warm water through the pump to keep the nozzle pristine.',
       image: '/images/accessories.jpg',
-      highlight: 'Smooth pneumatic piston',
-    },
-    {
-      number: '04',
-      title: 'Spray Mist or Pour Smoothly',
-      subtitle: 'STEP 4: SPRAY OR DISPENSE',
-      description:
-        'Depress fully for an ultra-fine atomized mist, or simply tilt the carafe over your hot pan for a steady, drip-free pour.',
-      image: '/images/spray.jpg',
-      highlight: 'Instant dual-action choice',
+      alt: 'KitchEase cleaning brush and maintenance kit',
+      highlight: 'Custom bottle brushes included',
     },
   ];
 
   return (
-    <section id="how-it-works" className="py-16 sm:py-24 bg-[#0F0F0F] border-b border-white/10">
+    <section id="how-it-works" className="py-16 sm:py-24 bg-[#FAF8F5] border-b border-stone-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="h-px w-8 bg-[#D4AF37]" />
-            <span className="text-[11px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37]">
-              Effortless Simplicity
-            </span>
-            <span className="h-px w-8 bg-[#D4AF37]" />
+        
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs font-semibold uppercase tracking-wider mb-3">
+            <span>Simple Operation</span>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-normal text-[#EAEAEA] mt-2 tracking-tight">
-            How It Works in 4 Easy Steps
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-normal text-stone-900 tracking-tight">
+            How It Works
           </h2>
-          <p className="mt-4 text-white/50 text-base leading-relaxed font-light">
-            From refilling to misting and pouring, KitchEase is intuitive and crafted for everyday cooking rhythm.
+          <p className="mt-3 text-stone-600 text-base font-light">
+            Designed for intuitive, clean, and reliable performance every time you step into the kitchen.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 4-Step Cards with Image beside/above each step */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {steps.map((step, idx) => (
             <div
               key={idx}
-              className="bg-[#151515] rounded-2xl p-5 border border-white/10 shadow-xl flex flex-col justify-between hover:border-[#D4AF37]/50 hover:bg-[#1A1A1A] transition-all group"
+              className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-stone-300 transition-all duration-300 flex flex-col justify-between group"
             >
               <div>
                 {/* Step Image */}
-                <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1A1A1A] mb-5">
+                <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-stone-50 border border-stone-100 mb-5">
                   <img
                     src={step.image}
-                    alt={step.title}
+                    alt={step.alt}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
                   />
-                  <span className="absolute top-3 left-3 bg-[#D4AF37] text-black text-xs font-bold px-2.5 py-1 rounded">
-                    {step.number}
+                  <span className="absolute top-3 left-3 bg-[#2A4B3C] text-white text-[11px] font-bold px-2.5 py-1 rounded-md shadow-xs">
+                    0{idx + 1}
                   </span>
                 </div>
 
-                <span className="text-[10px] font-bold text-[#D4AF37] tracking-widest uppercase block">
-                  {step.subtitle}
+                {/* Step Label (STEP 1 — FILL, etc.) */}
+                <span className="text-xs font-bold text-[#2A4B3C] tracking-widest uppercase block">
+                  {step.stepLabel}
                 </span>
-                <h3 className="font-display text-lg font-normal text-[#EAEAEA] mt-1">
+
+                {/* Step Title (exact requested copy) */}
+                <h3 className="font-display text-lg font-normal text-stone-900 mt-1 mb-2">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-xs text-white/50 leading-relaxed font-light">
+
+                {/* Step Description */}
+                <p className="text-xs sm:text-sm text-stone-500 leading-relaxed font-light">
                   {step.description}
                 </p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-white/10 flex items-center gap-1.5 text-[11px] font-medium text-[#D4AF37]">
+              <div className="mt-4 pt-3 border-t border-stone-100 flex items-center gap-1.5 text-xs font-medium text-[#2A4B3C]">
                 <Check className="w-3.5 h-3.5" />
                 <span>{step.highlight}</span>
               </div>
             </div>
           ))}
         </div>
+
       </div>
     </section>
   );

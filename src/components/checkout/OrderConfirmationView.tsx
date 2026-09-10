@@ -1,154 +1,205 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import {
-  CheckCircle,
-  PackageCheck,
+  CheckCircle2,
+  Package,
   Calendar,
   MapPin,
   User,
   ArrowRight,
-  ShoppingBag,
-  ExternalLink,
+  Truck,
+  Copy,
+  Check,
+  Home,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Order } from '../../types.ts';
-import { useAuth } from '../../context/AuthContext.tsx';
 
 interface OrderConfirmationViewProps {
   order: Order;
-  onNavigate: (view: 'store' | 'admin' | 'account' | 'checkout' | 'confirmation') => void;
+  onNavigate: (view: 'store' | 'admin' | 'account' | 'checkout' | 'confirmation', sectionId?: string) => void;
 }
 
 export const OrderConfirmationView: React.FC<OrderConfirmationViewProps> = ({ order, onNavigate }) => {
-  const { user } = useAuth();
+  const [copied, setCopied] = React.useState(false);
 
   useEffect(() => {
-    // Fire festive celebration confetti
     try {
       confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#2C4A3E', '#C99A46', '#F5DEB3', '#4A7A66'],
+        particleCount: 60,
+        spread: 60,
+        origin: { y: 0.55 },
+        colors: ['#2A4B3C', '#E2A93B', '#FAF8F5', '#52796F'],
       });
     } catch {
-      // Safe fallback
+      // safe fallback
     }
   }, []);
 
+  const copyOrderId = () => {
+    navigator.clipboard.writeText(order.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const total = order.totalAmount ?? order.total ?? 0;
+  const cust = order.customerInformation;
+
   return (
-    <div className="min-h-screen bg-[#0F0F0F] py-12 lg:py-20 text-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAF8F5] py-12 lg:py-20 text-stone-900">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-[#151515] rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl space-y-8">
-          {/* Header checkmark & badge */}
+        
+        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200/90 shadow-md space-y-8">
+          
+          {/* Header checkmark & Thank You */}
           <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center mx-auto shadow-lg">
-              <CheckCircle className="w-9 h-9" />
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mx-auto shadow-xs">
+              <CheckCircle2 className="w-9 h-9 text-[#2A4B3C]" />
             </div>
-            <span className="px-3.5 py-1 bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-semibold uppercase tracking-wider rounded-full inline-block">
-              Order {order.status}
+
+            <span className="px-3.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold uppercase tracking-wider rounded-full inline-block">
+              Order Confirmed &bull; {order.status.toUpperCase()}
             </span>
-            <h1 className="font-display text-3xl sm:text-4xl font-normal text-[#EAEAEA]">
+
+            <h1 className="font-display text-3xl sm:text-4xl font-normal text-stone-900">
               Thank You for Your Order!
             </h1>
-            <p className="text-xs sm:text-sm text-white/50 max-w-md mx-auto font-light">
-              We have received your order and sent a confirmation receipt to{' '}
-              <strong className="text-white font-medium">{order.customerInformation.email}</strong>.
+
+            <p className="text-sm text-stone-600 max-w-md mx-auto font-light">
+              We have received your order and sent a receipt and confirmation email to{' '}
+              <strong className="text-stone-900 font-semibold">{cust.email}</strong>.
             </p>
           </div>
 
-          {/* Order Snapshot Card */}
-          <div className="p-5 rounded-2xl bg-[#1A1A1A] border border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          {/* Key Order Snapshot */}
+          <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-stone-200 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div>
-              <span className="text-white/40 block font-light">Order ID</span>
-              <span className="font-medium text-[#EAEAEA] font-mono text-sm">{order.id}</span>
+              <span className="text-stone-500 block font-light">Order ID</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="font-mono font-bold text-stone-900 truncate">{order.id}</span>
+                <button
+                  onClick={copyOrderId}
+                  className="p-1 text-stone-400 hover:text-stone-800 cursor-pointer"
+                  title="Copy Order ID"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
+
             <div>
-              <span className="text-white/40 block font-light">Date</span>
-              <span className="font-medium text-[#EAEAEA]">
+              <span className="text-stone-500 block font-light">Order Date</span>
+              <span className="font-semibold text-stone-800 mt-0.5 block">
                 {new Date(order.createdAt).toLocaleDateString()}
               </span>
             </div>
+
             <div>
-              <span className="text-white/40 block font-light">Total Amount</span>
-              <span className="font-semibold text-[#D4AF37] text-sm">${(order.totalAmount ?? order.total ?? 0).toFixed(2)}</span>
+              <span className="text-stone-500 block font-light">Total Amount</span>
+              <span className="font-bold text-[#2A4B3C] text-sm mt-0.5 block">
+                ${total.toFixed(2)}
+              </span>
             </div>
+
             <div>
-              <span className="text-white/40 block font-light">Payment</span>
-              <span className="font-medium text-[#D4AF37]">Verified</span>
+              <span className="text-stone-500 block font-light">Shipping</span>
+              <span className="font-semibold text-emerald-700 mt-0.5 block">
+                Free Standard Tracked
+              </span>
             </div>
           </div>
 
-          {/* Order Items Breakdown */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37]">
-              Purchased Product
-            </h3>
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-[#1A1A1A] border border-white/10">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-[#121212] overflow-hidden flex-shrink-0 border border-white/10 p-1 flex items-center justify-center">
+          {/* Ordered Item Summary */}
+          <div className="space-y-3">
+            <h2 className="font-display text-lg font-normal text-stone-900 flex items-center gap-2">
+              <Package className="w-4 h-4 text-[#2A4B3C]" />
+              <span>Summary of Ordered Items</span>
+            </h2>
+
+            <div className="p-4 rounded-2xl border border-stone-200/80 bg-white flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-xl bg-[#FAF8F5] border border-stone-200 p-1 flex items-center justify-center flex-shrink-0">
                   <img
-                    src={order.productImage || '/images/hero.jpg'}
-                    alt={order.productTitle || order.productName || 'KitchEase Oil Dispenser'}
+                    src="/images/hero.jpg"
+                    alt="KitchEase 2-in-1 Dispenser"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain"
                   />
                 </div>
                 <div>
-                  <h4 className="font-medium text-sm text-[#EAEAEA]">
-                    {order.productTitle || order.productName || 'KitchEase Oil Dispenser / Sprayer'}
-                  </h4>
-                  <p className="text-xs text-white/50 mt-0.5 font-light">Quantity: {order.quantity}</p>
+                  <h3 className="font-medium text-sm text-stone-900">
+                    KitchEase 2-in-1 Oil Dispenser &amp; Sprayer
+                  </h3>
+                  <span className="text-xs text-stone-500">
+                    470ml Borosilicate Glass &bull; Quantity: <strong>{order.quantity}</strong>
+                  </span>
                 </div>
               </div>
-              <span className="font-semibold text-sm text-[#D4AF37]">
-                ${(order.totalAmount ?? order.total ?? 0).toFixed(2)}
+
+              <span className="font-bold text-stone-900 text-sm">
+                ${total.toFixed(2)}
               </span>
             </div>
           </div>
 
-          {/* Customer & Shipping Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-1">
-              <span className="font-medium text-white flex items-center gap-1.5 mb-1.5">
-                <User className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Customer Details</span>
-              </span>
-              <p className="font-medium text-[#EAEAEA]">{order.customerInformation.fullName}</p>
-              <p className="text-white/50 font-light">{order.customerInformation.email}</p>
-              <p className="text-white/50 font-light">{order.customerInformation.phone}</p>
-            </div>
+          {/* Delivery Address */}
+          <div className="space-y-3">
+            <h2 className="font-display text-lg font-normal text-stone-900 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-[#2A4B3C]" />
+              <span>Delivery Address</span>
+            </h2>
 
-            <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-1">
-              <span className="font-medium text-white flex items-center gap-1.5 mb-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Delivery Address</span>
-              </span>
-              <p className="font-medium text-[#EAEAEA]">{order.customerInformation.address}</p>
-              <p className="text-white/50 font-light">
-                {order.customerInformation.city}, {order.customerInformation.state}{' '}
-                {order.customerInformation.postalCode}
+            <div className="p-4 rounded-2xl border border-stone-200/80 bg-white text-xs sm:text-sm text-stone-700 space-y-1">
+              <strong className="text-stone-900 block font-semibold">{cust.fullName}</strong>
+              <p className="text-stone-600 font-light">{cust.address}</p>
+              <p className="text-stone-600 font-light">
+                {cust.city ? `${cust.city}, ` : ''}{cust.state || ''} {cust.postalCode}
               </p>
+              <p className="text-stone-500 pt-1 font-mono text-xs">Phone: {cust.phone}</p>
             </div>
           </div>
 
-          {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
+          {/* Friendly Message Explaining Next Steps */}
+          <div className="p-5 rounded-2xl bg-amber-50/50 border border-amber-200/80 text-xs sm:text-sm text-amber-950 space-y-2">
+            <strong className="block font-semibold text-amber-900 flex items-center gap-1.5">
+              <Truck className="w-4 h-4 text-amber-800" />
+              What Happens Next?
+            </strong>
+            <ol className="list-decimal list-inside space-y-1 text-amber-900/80 font-light pl-1">
+              <li>
+                <strong>Fulfillment:</strong> Your order will be inspected and packed securely within 24 hours.
+              </li>
+              <li>
+                <strong>Dispatch &amp; Tracking:</strong> As soon as your parcel is handed over to the courier, we will update your order tracking.
+              </li>
+              <li>
+                <strong>Delivery:</strong> Expect arrival at your doorstep in 2 to 4 business days.
+              </li>
+            </ol>
+          </div>
+
+          {/* Navigation Action Buttons: "Back to Home" & "Track My Order" */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-stone-100">
+            <button
+              id="confirmation-back-home-btn"
+              onClick={() => onNavigate('store')}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#2A4B3C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#213B2F] transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Home className="w-4 h-4" />
+              <span>Back to Home</span>
+            </button>
+
             <button
               onClick={() => onNavigate('account')}
-              className="flex-1 py-3.5 px-6 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-stone-300 text-stone-700 hover:border-stone-400 hover:bg-stone-50 font-semibold text-xs uppercase tracking-wider transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>View &amp; Track in Customer Portal</span>
-              <ExternalLink className="w-4 h-4 text-black" />
-            </button>
-
-            <button
-              onClick={() => onNavigate('store')}
-              className="py-3.5 px-6 rounded-md bg-white/5 border border-white/15 text-[#EAEAEA] font-semibold text-xs uppercase tracking-wider hover:bg-white/10 transition-colors text-center cursor-pointer"
-            >
-              Back to Home
+              <Truck className="w-4 h-4 text-[#2A4B3C]" />
+              <span>Track My Order</span>
             </button>
           </div>
+
         </div>
+
       </div>
     </div>
   );

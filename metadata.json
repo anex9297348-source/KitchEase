@@ -1,6 +1,6 @@
 {
   "name": "KitchEase",
-  "description": "Smarter Oil. Better Cooking. Control every drop with the KitchEase 2-in-1 Oil Dispenser & Sprayer.",
+  "description": "Discover KitchEase, a practical oil dispenser and sprayer designed to make everyday cooking simpler and more convenient.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

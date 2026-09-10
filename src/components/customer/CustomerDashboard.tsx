@@ -7,7 +7,6 @@ import {
   User,
   LogOut,
   ShoppingBag,
-  ExternalLink,
   ChevronRight,
   Plus,
   Trash2,
@@ -16,7 +15,6 @@ import {
   Truck,
   AlertCircle,
   X,
-  FileText,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { useCart } from '../../context/CartContext.tsx';
@@ -101,24 +99,25 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     }
   }, [user]);
 
+  // If user is not logged in: display the Track My Order portal directly!
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] py-8 sm:py-12 text-[#EAEAEA]">
+      <div className="min-h-screen bg-[#FAF8F5] py-10 sm:py-16 text-stone-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
           {/* Top Welcome & Sign In Banner */}
-          <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center shadow-md flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-[#2A4B3C]/10 text-[#2A4B3C] flex items-center justify-center flex-shrink-0">
                 <Truck className="w-7 h-7" />
               </div>
               <div>
-                <span className="text-xs uppercase tracking-wider font-semibold text-[#D4AF37] block">
-                  Customer Portal &amp; Self-Service
+                <span className="text-xs uppercase tracking-wider font-semibold text-[#2A4B3C] block">
+                  Self-Service Order Lookup
                 </span>
-                <h1 className="font-display text-2xl sm:text-3xl font-normal text-[#EAEAEA]">
+                <h1 className="font-display text-2xl sm:text-3xl font-normal text-stone-900">
                   Track My Order
                 </h1>
-                <p className="text-xs text-white/50 font-light mt-0.5">
+                <p className="text-xs text-stone-500 font-light mt-0.5">
                   Input your Order ID and customer email to check real-time fulfillment and delivery status.
                 </p>
               </div>
@@ -128,13 +127,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
               <button
                 id="btn-guest-signin"
                 onClick={() => openAuthModal('login')}
-                className="px-4 py-2.5 rounded-xl bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer whitespace-nowrap shadow-md"
+                className="px-4 py-2.5 rounded-xl bg-[#2A4B3C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#213B2F] transition-colors cursor-pointer whitespace-nowrap shadow-sm"
               >
                 Sign In to Account
               </button>
               <button
                 onClick={() => onNavigate('store')}
-                className="px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 text-xs font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                className="px-4 py-2.5 rounded-xl border border-stone-300 bg-stone-100 text-xs font-semibold text-stone-700 hover:bg-stone-200 transition-colors cursor-pointer whitespace-nowrap"
               >
                 Back to Store
               </button>
@@ -201,29 +200,30 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] py-8 sm:py-12 text-[#EAEAEA]">
+    <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 text-stone-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
         {/* Top Welcome Bar */}
-        <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#D4AF37] text-black flex items-center justify-center font-display text-2xl font-bold shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-[#2A4B3C] text-white flex items-center justify-center font-display text-2xl font-bold shadow-sm">
               {user.name.charAt(0)}
             </div>
             <div>
-              <span className="text-xs uppercase tracking-wider font-semibold text-[#D4AF37]">
-                Welcome Back
+              <span className="text-xs uppercase tracking-wider font-semibold text-[#2A4B3C]">
+                Customer Account
               </span>
-              <h1 className="font-display text-2xl sm:text-3xl font-normal text-[#EAEAEA]">
+              <h1 className="font-display text-2xl sm:text-3xl font-normal text-stone-900">
                 {user.name}
               </h1>
-              <p className="text-xs text-white/50 font-light">{user.email}</p>
+              <p className="text-xs text-stone-500 font-light">{user.email}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate('store')}
-              className="px-4 py-2.5 rounded-md border border-white/15 bg-white/5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-stone-300 bg-stone-100 text-xs font-semibold text-stone-700 hover:bg-stone-200 transition-colors cursor-pointer"
             >
               Shop Store
             </button>
@@ -232,7 +232,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 logout();
                 onNavigate('store');
               }}
-              className="p-2.5 rounded-md text-white/40 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
+              className="p-2.5 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="w-5 h-5" />
@@ -242,15 +242,16 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
           {/* Navigation Sidebar (3 cols) */}
           <div className="lg:col-span-3 space-y-2">
-            <div className="bg-[#151515] rounded-3xl p-4 border border-white/10 shadow-2xl space-y-1">
+            <div className="bg-white rounded-3xl p-4 border border-stone-200/90 shadow-sm space-y-1">
               <button
                 onClick={() => setActiveTab('orders')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'orders'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -265,8 +266,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => setActiveTab('track')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'track'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -280,13 +281,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => setActiveTab('profile')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'profile'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
                   <User className="w-4 h-4" />
-                  <span>Account Profile</span>
+                  <span>Profile Settings</span>
                 </span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -295,8 +296,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => setActiveTab('addresses')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'addresses'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -310,8 +311,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => setActiveTab('wishlist')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'wishlist'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -325,8 +326,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 onClick={() => setActiveTab('support')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'support'
-                    ? 'bg-[#D4AF37] text-black font-bold'
-                    : 'text-white/70 hover:bg-white/5'
+                    ? 'bg-[#2A4B3C] text-white font-bold'
+                    : 'text-stone-600 hover:bg-stone-100'
                 }`}
               >
                 <span className="flex items-center gap-2.5">
@@ -344,30 +345,30 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             {activeTab === 'orders' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-display text-xl font-normal text-[#EAEAEA]">Order History</h2>
+                  <h2 className="font-display text-xl font-normal text-stone-900">Order History</h2>
                   <button
                     onClick={fetchOrders}
-                    className="text-xs text-[#D4AF37] font-semibold hover:underline cursor-pointer"
+                    className="text-xs text-[#2A4B3C] font-semibold hover:underline cursor-pointer"
                   >
-                    Refresh Status
+                    Refresh Orders
                   </button>
                 </div>
 
                 {/* Quick Banner to Track My Order */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-[#1A1A1A] to-[#151515] border border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#2A4B3C]/10 text-[#2A4B3C] flex items-center justify-center flex-shrink-0">
                       <Truck className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-white">Looking for another order or guest purchase?</p>
-                      <p className="text-[11px] text-white/50 font-light">Enter an Order ID and customer email to get real-time tracking.</p>
+                      <p className="text-xs font-semibold text-stone-900">Looking for another order or guest purchase?</p>
+                      <p className="text-[11px] text-stone-500 font-light">Enter an Order ID and customer email to get real-time tracking.</p>
                     </div>
                   </div>
                   <button
                     id="btn-goto-track-order"
                     onClick={() => setActiveTab('track')}
-                    className="px-3.5 py-2 rounded-lg bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto"
+                    className="px-3.5 py-2 rounded-xl bg-[#2A4B3C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#213B2F] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap self-start sm:self-auto shadow-xs"
                   >
                     <span>Track Order</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -375,30 +376,30 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 </div>
 
                 {loadingOrders ? (
-                  <div className="p-12 text-center bg-[#151515] rounded-3xl border border-white/10 text-white/50 text-sm font-light">
+                  <div className="p-12 text-center bg-white rounded-3xl border border-stone-200/90 text-stone-400 text-sm font-light">
                     Loading your culinary orders...
                   </div>
                 ) : orders.length === 0 ? (
-                  <div className="bg-[#151515] rounded-3xl p-10 border border-white/10 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-[#1A1A1A] text-[#D4AF37] flex items-center justify-center mx-auto border border-white/10">
+                  <div className="bg-white rounded-3xl p-10 border border-stone-200/90 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center mx-auto">
                       <ShoppingBag className="w-8 h-8" />
                     </div>
-                    <h3 className="font-display text-lg font-normal text-[#EAEAEA]">
+                    <h3 className="font-display text-lg font-normal text-stone-900">
                       No orders placed yet
                     </h3>
-                    <p className="text-xs text-white/50 max-w-sm mx-auto font-light">
-                      Upgrade your kitchen with the KitchEase 2-in-1 oil dispenser. Fast tracked delivery on all orders.
+                    <p className="text-xs text-stone-500 max-w-sm mx-auto font-light">
+                      Upgrade your kitchen with the KitchEase 2-in-1 oil dispenser. Free tracked delivery on all orders.
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                       <button
                         onClick={() => onNavigate('store')}
-                        className="px-6 py-3 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
+                        className="px-6 py-3 rounded-xl bg-[#2A4B3C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#213B2F] transition-colors cursor-pointer"
                       >
-                        Shop the KitchEase Dispenser
+                        Shop KitchEase Dispenser
                       </button>
                       <button
                         onClick={() => setActiveTab('track')}
-                        className="px-6 py-3 rounded-md bg-white/5 border border-white/15 text-white font-semibold text-xs uppercase tracking-wider hover:bg-white/10 transition-colors cursor-pointer"
+                        className="px-6 py-3 rounded-xl bg-stone-100 border border-stone-200 text-stone-700 font-semibold text-xs uppercase tracking-wider hover:bg-stone-200 transition-colors cursor-pointer"
                       >
                         Track an Order
                       </button>
@@ -409,14 +410,14 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     {orders.map((ord) => (
                       <div
                         key={ord.id}
-                        className="bg-[#151515] rounded-3xl p-5 sm:p-6 border border-white/10 shadow-lg hover:border-white/20 transition-all space-y-4"
+                        className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/90 shadow-sm hover:border-stone-300 transition-all space-y-4"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
                           <div className="space-y-0.5">
-                            <span className="text-[11px] font-mono text-[#D4AF37] uppercase">
+                            <span className="text-[11px] font-mono text-[#2A4B3C] font-semibold uppercase">
                               Order ID: {ord.id}
                             </span>
-                            <p className="text-xs text-white/50 font-light">
+                            <p className="text-xs text-stone-500 font-light">
                               Placed on {new Date(ord.createdAt).toLocaleDateString()} at{' '}
                               {new Date(ord.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -428,10 +429,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider self-start sm:self-auto ${
                               ord.status === 'DELIVERED'
-                                ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                                 : ord.status === 'CANCELLED'
-                                ? 'bg-red-950/60 text-red-400 border border-red-800'
-                                : 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20'
+                                ? 'bg-red-50 text-red-800 border border-red-200'
+                                : 'bg-amber-50 text-amber-900 border border-amber-200'
                             }`}
                           >
                             {ord.status}
@@ -441,7 +442,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                         {/* Product info */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-xl bg-[#1A1A1A] overflow-hidden flex-shrink-0 border border-white/10 p-1 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-xl bg-[#FAF8F5] overflow-hidden flex-shrink-0 border border-stone-200 p-1 flex items-center justify-center">
                               <img
                                 src={ord.productImage || '/images/hero.jpg'}
                                 alt={ord.productTitle || ord.productName || 'KitchEase Dispenser'}
@@ -450,35 +451,31 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                               />
                             </div>
                             <div>
-                              <h4 className="font-medium text-sm text-[#EAEAEA]">
-                                {ord.productTitle || ord.productName || 'KitchEase Oil Dispenser / Sprayer'}
+                              <h4 className="font-medium text-sm text-stone-900">
+                                {ord.productTitle || ord.productName || 'KitchEase Oil Dispenser & Sprayer'}
                               </h4>
-                              <p className="text-xs text-white/50 font-light">Quantity: {ord.quantity}</p>
-                              <span className="text-xs font-semibold text-[#D4AF37] block mt-1">
-                                Total: ${(ord.totalAmount ?? ord.total ?? 0).toFixed(2)}
-                              </span>
+                              <p className="text-xs text-stone-500 font-light">
+                                Qty: {ord.quantity} • Total: ${(ord.totalAmount ?? ord.total ?? 0).toFixed(2)}
+                              </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 self-end sm:self-center">
+                          <div className="flex items-center gap-3">
                             <button
                               onClick={() => {
                                 setTrackOrderId(ord.id);
                                 setActiveTab('track');
                               }}
-                              className="px-3.5 py-2.5 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-xs font-semibold uppercase tracking-wider text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors flex items-center gap-1.5 cursor-pointer"
-                              title="Live Milestone Tracking"
+                              className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Truck className="w-3.5 h-3.5" />
-                              <span>Track Live</span>
+                              <Truck className="w-3.5 h-3.5 text-[#2A4B3C]" />
+                              <span>Track Status</span>
                             </button>
-
                             <button
                               onClick={() => setSelectedOrder(ord)}
-                              className="px-3.5 py-2.5 rounded-md bg-white/5 border border-white/15 text-xs font-semibold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer"
+                              className="px-4 py-2 rounded-xl bg-[#2A4B3C] hover:bg-[#213B2F] text-white text-xs font-semibold transition-colors cursor-pointer"
                             >
-                              <span>Details</span>
-                              <ChevronRight className="w-4 h-4" />
+                              View Details
                             </button>
                           </div>
                         </div>
@@ -495,157 +492,161 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                 initialOrderId={trackOrderId}
                 defaultEmail={user.email}
                 recentOrders={orders}
-                onNavigateSupport={() => setActiveTab('support')}
+                onSelectOrder={(ord) => {
+                  setSelectedOrder(ord);
+                }}
+                onNavigateSupport={() => onNavigate('store', 'faq-section')}
               />
             )}
 
-            {/* TAB: PROFILE */}
+            {/* TAB: ACCOUNT PROFILE */}
             {activeTab === 'profile' && (
-              <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6">
-                <h2 className="font-display text-xl font-normal text-[#EAEAEA]">Account Details</h2>
-
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm space-y-6">
+                <h2 className="font-display text-xl font-normal text-stone-900">Personal Information</h2>
+                
                 {profileSuccess && (
-                  <div className="p-4 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-medium flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Your profile information has been saved successfully.</span>
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Profile updated successfully!</span>
                   </div>
                 )}
 
                 {profileError && (
-                  <div className="p-4 rounded-xl bg-red-950/40 border border-red-800 text-red-300 text-xs font-medium flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
+                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
                     <span>{profileError}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleUpdateProfile} className="space-y-4 max-w-lg">
                   <div>
-                    <label className="block text-xs font-medium text-white/70 mb-1">Full Name</label>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">Full Name</label>
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-[#FAF8F5] text-stone-900 text-sm focus:border-[#2A4B3C] focus:bg-white focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-white/70 mb-1">
-                      Email Address (Read-only)
-                    </label>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">Email Address</label>
                     <input
                       type="email"
                       disabled
                       value={user.email}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-white/10 bg-[#121212] text-sm text-white/40 cursor-not-allowed"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-stone-100 text-stone-500 text-sm cursor-not-allowed"
                     />
+                    <span className="text-[11px] text-stone-400 font-light mt-0.5 block">Email address cannot be changed.</span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-white/70 mb-1">Phone Number</label>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">Phone Number</label>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+1 (555) 019-2834"
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4AF37]"
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-[#FAF8F5] text-stone-900 text-sm focus:border-[#2A4B3C] focus:bg-white focus:outline-none"
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    className="py-3 px-6 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
-                  >
-                    Save Changes
-                  </button>
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-[#2A4B3C] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#213B2F] transition-colors cursor-pointer shadow-xs"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </form>
               </div>
             )}
 
             {/* TAB: SAVED ADDRESSES */}
             {activeTab === 'addresses' && (
-              <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-display text-xl font-normal text-[#EAEAEA]">Saved Delivery Addresses</h2>
+                  <h2 className="font-display text-xl font-normal text-stone-900">Saved Addresses</h2>
                   <button
                     onClick={() => setShowAddAddress(!showAddAddress)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add New Address</span>
+                    <span>{showAddAddress ? 'Cancel' : 'Add Address'}</span>
                   </button>
                 </div>
 
                 {showAddAddress && (
                   <form
                     onSubmit={handleAddAddress}
-                    className="p-5 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-4 animate-in fade-in"
+                    className="p-5 rounded-2xl bg-[#FAF8F5] border border-stone-200 space-y-4"
                   >
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37]">
-                      Add New Shipping Address
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#2A4B3C]">
+                      Add New Delivery Address
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-medium text-white/70 mb-1">Recipient Name</label>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">Recipient Name</label>
                         <input
                           type="text"
                           value={addrName}
                           onChange={(e) => setAddrName(e.target.value)}
                           placeholder={user.name}
-                          className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-medium text-white/70 mb-1">Phone</label>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">Phone</label>
                         <input
                           type="tel"
                           value={addrPhone}
                           onChange={(e) => setAddrPhone(e.target.value)}
                           placeholder="+1 (555) 000-0000"
-                          className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-white/70 mb-1">Street Address</label>
+                      <label className="block text-[11px] font-medium text-stone-700 mb-1">Street Address</label>
                       <input
                         type="text"
                         required
                         value={addrStreet}
                         onChange={(e) => setAddrStreet(e.target.value)}
                         placeholder="123 Olive Grove Lane"
-                        className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-[11px] font-medium text-white/70 mb-1">City</label>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">City</label>
                         <input
                           type="text"
                           required
                           value={addrCity}
                           onChange={(e) => setAddrCity(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-medium text-white/70 mb-1">State</label>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">State</label>
                         <input
                           type="text"
                           value={addrState}
                           onChange={(e) => setAddrState(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-medium text-white/70 mb-1">ZIP / Postal</label>
+                        <label className="block text-[11px] font-medium text-stone-700 mb-1">ZIP / Postal</label>
                         <input
                           type="text"
                           required
                           value={addrZip}
                           onChange={(e) => setAddrZip(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#121212] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white text-stone-900 text-xs focus:border-[#2A4B3C] focus:outline-none"
                         />
                       </div>
                     </div>
@@ -653,13 +654,13 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowAddAddress(false)}
-                        className="px-3 py-1.5 text-xs text-white/60 hover:text-white cursor-pointer"
+                        className="px-3.5 py-1.5 text-xs text-stone-600 hover:text-stone-900 cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-1.5 rounded-md bg-[#D4AF37] text-black text-xs font-bold cursor-pointer"
+                        className="px-4 py-1.5 rounded-xl bg-[#2A4B3C] text-white text-xs font-bold cursor-pointer"
                       >
                         Save Address
                       </button>
@@ -672,22 +673,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     user.addresses.map((addr) => (
                       <div
                         key={addr.id}
-                        className="p-5 rounded-2xl bg-[#1A1A1A] border border-white/10 relative flex flex-col justify-between"
+                        className="p-5 rounded-2xl bg-[#FAF8F5] border border-stone-200 relative flex flex-col justify-between"
                       >
                         <div className="space-y-1">
-                          <span className="font-medium text-sm text-[#EAEAEA] block">{addr.fullName}</span>
-                          <p className="text-xs text-white/60 font-light">{addr.address}</p>
-                          <p className="text-xs text-white/60 font-light">
+                          <span className="font-semibold text-sm text-stone-900 block">{addr.fullName}</span>
+                          <p className="text-xs text-stone-600 font-light">{addr.address}</p>
+                          <p className="text-xs text-stone-600 font-light">
                             {addr.city}, {addr.state} {addr.postalCode}
                           </p>
-                          <p className="text-xs text-white/40 mt-1">{addr.phone}</p>
+                          {addr.phone && <p className="text-xs text-stone-400 mt-1">{addr.phone}</p>}
                         </div>
 
-                        <div className="pt-4 flex justify-between items-center border-t border-white/10 mt-3">
-                          <span className="text-[11px] text-[#D4AF37] font-medium">Standard Shipping</span>
+                        <div className="pt-4 flex justify-between items-center border-t border-stone-200/80 mt-3">
+                          <span className="text-[11px] text-[#2A4B3C] font-semibold">Standard Shipping</span>
                           <button
                             onClick={() => handleDeleteAddress(addr.id)}
-                            className="text-white/40 hover:text-red-400 text-xs p-1 transition-colors cursor-pointer"
+                            className="text-stone-400 hover:text-red-600 text-xs p-1 transition-colors cursor-pointer"
                             title="Remove address"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -696,8 +697,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-white/40 col-span-2 font-light">
-                      No saved addresses yet. Add one for rapid 1-click checkout.
+                    <p className="text-xs text-stone-400 col-span-2 font-light">
+                      No saved addresses yet. Add one for rapid checkout.
                     </p>
                   )}
                 </div>
@@ -706,10 +707,10 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* TAB: RE-ORDER WISHLIST */}
             {activeTab === 'wishlist' && (
-              <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6">
-                <h2 className="font-display text-xl font-normal text-[#EAEAEA]">Instant Quick Re-order</h2>
-                <div className="p-6 rounded-2xl bg-[#1A1A1A] border border-white/10 flex flex-col sm:flex-row items-center gap-6">
-                  <div className="w-28 h-28 rounded-2xl bg-[#121212] overflow-hidden flex-shrink-0 border border-white/10 p-2 flex items-center justify-center">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm space-y-6">
+                <h2 className="font-display text-xl font-normal text-stone-900">Instant Quick Re-order</h2>
+                <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-stone-200 flex flex-col sm:flex-row items-center gap-6">
+                  <div className="w-28 h-28 rounded-2xl bg-white overflow-hidden flex-shrink-0 border border-stone-200 p-2 flex items-center justify-center">
                     <img
                       src="/images/hero.jpg"
                       alt="KitchEase Dispenser"
@@ -718,16 +719,16 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                     />
                   </div>
                   <div className="flex-1 space-y-2 text-center sm:text-left">
-                    <h3 className="font-display text-lg font-normal text-[#EAEAEA]">
-                      KitchEase Oil Dispenser / Sprayer
+                    <h3 className="font-display text-lg font-normal text-stone-900">
+                      KitchEase Oil Dispenser &amp; Sprayer
                     </h3>
-                    <p className="text-xs text-white/50 font-light">
+                    <p className="text-xs text-stone-500 font-light">
                       Order an additional unit for avocado oil, vinegar, or as a thoughtful gift for a fellow home chef.
                     </p>
                     <div className="flex items-baseline gap-2 justify-center sm:justify-start">
-                      <span className="text-xl font-bold text-[#D4AF37]">$29.99</span>
-                      <span className="text-xs text-white/30 line-through font-light">$49.99</span>
-                      <span className="text-xs text-[#D4AF37] font-semibold">40% OFF</span>
+                      <span className="text-xl font-bold text-stone-900">$29.99</span>
+                      <span className="text-xs text-stone-400 line-through font-light">$49.99</span>
+                      <span className="text-xs text-[#2A4B3C] font-semibold">40% OFF</span>
                     </div>
                   </div>
                   <button
@@ -735,7 +736,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       addToCart(1);
                       onNavigate('checkout');
                     }}
-                    className="px-6 py-3 rounded-md bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors whitespace-nowrap shadow-lg cursor-pointer"
+                    className="px-6 py-3 rounded-xl bg-[#2A4B3C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#213B2F] transition-colors whitespace-nowrap shadow-sm cursor-pointer"
                   >
                     Quick Order ($29.99)
                   </button>
@@ -745,30 +746,30 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* TAB: HELP & SUPPORT */}
             {activeTab === 'support' && (
-              <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6">
-                <h2 className="font-display text-xl font-normal text-[#EAEAEA]">Help &amp; Customer Care</h2>
-                <p className="text-xs text-white/50 leading-relaxed font-light">
-                  We are here to support your cooking journey. If you ever experience issues with misting pressure or have questions regarding maintenance, our culinary specialists respond within 24 hours.
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/90 shadow-sm space-y-6">
+                <h2 className="font-display text-xl font-normal text-stone-900">Help &amp; Customer Care</h2>
+                <p className="text-xs text-stone-500 leading-relaxed font-light">
+                  We are here to support your cooking journey. If you ever have questions regarding maintenance or nozzle care, our culinary specialists respond promptly.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-2">
-                    <h4 className="font-medium text-sm text-[#EAEAEA]">Order Inquiries</h4>
-                    <p className="text-[#D4AF37]">orders@kitchease.com</p>
-                    <p className="text-[11px] text-white/40 font-light">Please include your 6-character Order ID</p>
+                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200 space-y-2">
+                    <h4 className="font-semibold text-sm text-stone-900">Order Inquiries</h4>
+                    <p className="text-[#2A4B3C] font-medium">orders@kitchease.com</p>
+                    <p className="text-[11px] text-stone-400 font-light">Please include your Order ID</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-2">
-                    <h4 className="font-medium text-sm text-[#EAEAEA]">Product Assistance</h4>
-                    <p className="text-[#D4AF37]">support@kitchease.com</p>
-                    <p className="text-[11px] text-white/40 font-light">Cleaning instructions, nozzles &amp; parts</p>
+                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200 space-y-2">
+                    <h4 className="font-semibold text-sm text-stone-900">Product Assistance</h4>
+                    <p className="text-[#2A4B3C] font-medium">support@kitchease.com</p>
+                    <p className="text-[11px] text-stone-400 font-light">Cleaning instructions, nozzles &amp; parts</p>
                   </div>
                 </div>
 
                 <div className="pt-2">
                   <button
-                    onClick={() => onNavigate('store')}
-                    className="px-5 py-2.5 rounded-md border border-[#D4AF37] text-[#D4AF37] text-xs font-semibold hover:bg-[#D4AF37] hover:text-black transition-colors cursor-pointer"
+                    onClick={() => onNavigate('store', 'faq-section')}
+                    className="px-5 py-2.5 rounded-xl border border-[#2A4B3C] text-[#2A4B3C] text-xs font-semibold hover:bg-[#2A4B3C] hover:text-white transition-colors cursor-pointer"
                   >
                     Browse Complete FAQ &amp; Manual
                   </button>
@@ -781,20 +782,20 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
       {/* Order Details & Visual Progress Tracker Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-white/10 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto text-[#EAEAEA]">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-stone-200 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto text-stone-900">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <div>
-                <span className="text-[10px] font-mono text-[#D4AF37] uppercase">
+                <span className="text-[10px] font-mono text-[#2A4B3C] uppercase font-semibold">
                   Tracking Order #{selectedOrder.id}
                 </span>
-                <h3 className="font-display text-xl font-normal text-[#EAEAEA]">
+                <h3 className="font-display text-xl font-normal text-stone-900">
                   Live Shipment Status
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-2 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -804,9 +805,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <div className="py-4">
               <div className="relative flex items-center justify-between">
                 {/* Connecting background line */}
-                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-white/10 -z-0" />
+                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-stone-200 -z-0" />
                 <div
-                  className="absolute left-6 top-1/2 -translate-y-1/2 h-1 bg-[#D4AF37] transition-all -z-0"
+                  className="absolute left-6 top-1/2 -translate-y-1/2 h-1 bg-[#2A4B3C] transition-all -z-0"
                   style={{
                     width: `${Math.max(
                       0,
@@ -825,19 +826,19 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
                       <div
                         className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                           isCompleted
-                            ? 'bg-[#D4AF37] text-black shadow-md'
-                            : 'bg-[#1A1A1A] border-2 border-white/20 text-white/40'
-                        } ${isCurrent ? 'ring-4 ring-[#D4AF37]/30 scale-110' : ''}`}
+                            ? 'bg-[#2A4B3C] text-white shadow-xs'
+                            : 'bg-stone-100 border-2 border-stone-300 text-stone-400'
+                        } ${isCurrent ? 'ring-4 ring-[#2A4B3C]/20 scale-105' : ''}`}
                       >
                         {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                       </div>
                       <span
                         className={`text-[10px] font-semibold tracking-wider mt-2 uppercase ${
                           isCurrent
-                            ? 'text-[#D4AF37]'
+                            ? 'text-[#2A4B3C] font-bold'
                             : isCompleted
-                            ? 'text-white/80'
-                            : 'text-white/40'
+                            ? 'text-stone-800'
+                            : 'text-stone-400'
                         }`}
                       >
                         {step}
@@ -850,8 +851,8 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* Current status note */}
             {selectedOrder.adminNotes && (
-              <div className="p-3.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-xs text-[#D4AF37] flex items-center gap-2">
-                <Truck className="w-4 h-4 flex-shrink-0" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 flex items-center gap-2">
+                <Truck className="w-4 h-4 flex-shrink-0 text-amber-800" />
                 <span>
                   <strong>Latest Fulfillment Update:</strong> {selectedOrder.adminNotes}
                 </span>
@@ -860,22 +861,22 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
 
             {/* Item & Shipping Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
-              <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-1.5">
-                <span className="font-semibold text-white block mb-1">Item Details</span>
-                <p className="font-medium text-[#EAEAEA]">
-                  {selectedOrder.productTitle || selectedOrder.productName || 'KitchEase Oil Dispenser / Sprayer'}
+              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200 space-y-1.5">
+                <span className="font-semibold text-stone-900 block mb-1">Item Details</span>
+                <p className="font-medium text-stone-800">
+                  {selectedOrder.productTitle || selectedOrder.productName || 'KitchEase Oil Dispenser & Sprayer'}
                 </p>
-                <p className="text-white/50 font-light">Quantity: {selectedOrder.quantity}</p>
-                <p className="font-semibold text-[#D4AF37] mt-1">
+                <p className="text-stone-500 font-light">Quantity: {selectedOrder.quantity}</p>
+                <p className="font-bold text-[#2A4B3C] mt-1">
                   Total Paid: ${(selectedOrder.totalAmount ?? selectedOrder.total ?? 0).toFixed(2)}
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/10 space-y-1.5">
-                <span className="font-semibold text-white block mb-1">Delivery Destination</span>
-                <p className="font-medium text-[#EAEAEA]">{selectedOrder.customerInformation.fullName}</p>
-                <p className="text-white/50 font-light">{selectedOrder.customerInformation.address}</p>
-                <p className="text-white/50 font-light">
+              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200 space-y-1.5">
+                <span className="font-semibold text-stone-900 block mb-1">Delivery Destination</span>
+                <p className="font-medium text-stone-800">{selectedOrder.customerInformation.fullName}</p>
+                <p className="text-stone-500 font-light">{selectedOrder.customerInformation.address}</p>
+                <p className="text-stone-500 font-light">
                   {selectedOrder.customerInformation.city}, {selectedOrder.customerInformation.state}{' '}
                   {selectedOrder.customerInformation.postalCode}
                 </p>
@@ -885,9 +886,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="px-5 py-2.5 rounded-md bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-[#E5C158] transition-colors cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#2A4B3C] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#213B2F] transition-colors cursor-pointer"
               >
-                Done
+                Close
               </button>
             </div>
           </div>
@@ -896,3 +897,5 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({
     </div>
   );
 };
+
+export default CustomerDashboard;

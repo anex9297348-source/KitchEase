@@ -79,6 +79,22 @@ const initialImages: ProductImage[] = [
     order: 5,
     isMain: false,
   },
+  {
+    id: 'img-6',
+    url: '/images/oil_spray_action_1788685889614.jpg',
+    caption: 'Pneumatic Atomizing Mist - Broad, even coverage for cooking surfaces',
+    alt: 'Spraying fine mist of cooking oil onto cooking pan',
+    order: 6,
+    isMain: false,
+  },
+  {
+    id: 'img-7',
+    url: '/images/oil_pour_action_1788685906571.jpg',
+    caption: 'Precision Controlled Pour - Clean flow for sauteing and dressings',
+    alt: 'Pouring cooking oil into pan smoothly without drips',
+    order: 7,
+    isMain: false,
+  },
 ];
 
 const initialProduct: Product = {
@@ -187,44 +203,58 @@ const initialManual: UserManualData = {
   faqs: [
     {
       id: 'faq-1',
-      question: 'How does the KitchEase dual-action mechanism work?',
+      question: 'What is KitchEase?',
       answer:
-        'The engineered pump head features two dedicated channels: an automatic gravity-assisted pour valve that opens when the bottle is tilted, and a high-pressure atomizing pump triggered by depressing the top lever for a fine, uniform mist.',
-      category: 'Operation',
+        'KitchEase is an authentic 2-in-1 kitchen oil bottle designed for both controlled pouring and fine atomized spraying. Made with high-grade thermal borosilicate glass and food-safe BPA-free materials, it helps you cook with better oil control and zero chemical propellants.',
+      category: 'About',
     },
     {
       id: 'faq-2',
-      question: 'How do I get the finest mist instead of a stream?',
+      question: 'How does the spray function work?',
       answer:
-        'A quick, decisive press of the lever creates maximum pneumatic pressure, atomizing the oil into a wide, uniform cloud. A slow, gentle press will produce a heavier droplet stream.',
+        'A firm, decisive press of the top ergonomic lever pressurizes the mechanical pump chamber to create a wide, ultra-fine mist. It requires no batteries and no chemical aerosol propellants, making it ideal for air fryers, roasting vegetables, and coating skillets.',
       category: 'Operation',
     },
     {
       id: 'faq-3',
-      question: 'What types of oils can I use in KitchEase?',
+      question: 'How does the pouring function work?',
       answer:
-        'KitchEase works with any pure cooking oil: extra virgin olive oil, avocado oil, peanut oil, canola, sunflower, and sesame oil. Do not use oils infused with herbs or garlic cloves that could clog the fine nozzle.',
-      category: 'Usage',
+        'Simply tilt the bottle over your pan or bowl. The gravity-assisted pour valve automatically opens to release a smooth, measured drizzle. The anti-drip rim prevents oily runs down the side of the carafe.',
+      category: 'Operation',
     },
     {
       id: 'faq-4',
-      question: 'How do I clean and unclog the spray nozzle?',
+      question: 'What type of oil can I use?',
       answer:
-        'Fill the reservoir halfway with warm water and a pump of liquid dish soap. Swirl and pump 5-8 times through the nozzle into the sink. Then flush with clean warm water. We also include a custom cleaning brush in every box.',
-      category: 'Cleaning',
+        'KitchEase works seamlessly with any standard cooking oil, including olive oil, avocado oil, canola, vegetable, sesame, and sunflower oil. Avoid viscous liquids with heavy sediment or whole herb particles that could obstruct the fine nozzle.',
+      category: 'Usage',
     },
     {
       id: 'faq-5',
-      question: 'How long does shipping take?',
+      question: 'How do I clean it?',
       answer:
-        'Orders are processed within 24 hours. Domestic standard shipping takes 2-4 business days. Priority expedited shipping takes 1-2 business days. Tracking numbers are emailed immediately upon dispatch.',
-      category: 'Shipping',
+        'All components twist apart in seconds. For regular maintenance, add warm water and a drop of dish soap to the glass bottle, use the included flexible bottle brush, and pump warm soapy water through the nozzle 4–5 times to flush the valve. Rinse thoroughly with clear water and air dry.',
+      category: 'Cleaning',
     },
     {
       id: 'faq-6',
-      question: 'What is your return and warranty policy?',
+      question: 'How do I place an order?',
       answer:
-        'We offer a 30-day no-questions-asked money-back guarantee and a 1-year manufacturer warranty against defects. If you are not 100% delighted, our support team will replace or refund your order.',
+        'Click "BUY NOW" anywhere on the website, select your desired quantity, enter your delivery address and contact details on our simple checkout form, and confirm your order. You will receive an instant order receipt and tracking link.',
+      category: 'Ordering',
+    },
+    {
+      id: 'faq-7',
+      question: 'How long does delivery take?',
+      answer:
+        'Orders are processed within 24 hours. Standard domestic shipping takes 2 to 4 business days with direct tracking. We offer free shipping on all orders.',
+      category: 'Shipping',
+    },
+    {
+      id: 'faq-8',
+      question: 'What is your return/refund policy?',
+      answer:
+        'We offer a 30-day no-hassle money-back guarantee and a 1-year manufacturer warranty. If you are not completely satisfied with your KitchEase bottle, contact our support team at support@kitchease.com for an immediate replacement or refund.',
       category: 'Policy',
     },
   ],
