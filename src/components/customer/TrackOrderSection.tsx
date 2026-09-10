@@ -31,15 +31,18 @@ interface TrackOrderSectionProps {
 }
 
 const MILESTONES: { key: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'PENDING', label: 'Order Placed', icon: ShoppingBag },
+  { key: 'ORDER RECEIVED', label: 'Order Received', icon: ShoppingBag },
   { key: 'CONFIRMED', label: 'Confirmed', icon: CheckCircle2 },
-  { key: 'PROCESSING', label: 'Preparing', icon: Clock },
+  { key: 'PROCESSING', label: 'Processing', icon: Clock },
   { key: 'SHIPPED', label: 'Shipped', icon: Truck },
+  { key: 'OUT FOR DELIVERY', label: 'Out for Delivery', icon: Truck },
   { key: 'DELIVERED', label: 'Delivered', icon: MapPin },
 ];
 
 function normalizeStatus(status: OrderStatus): string {
-  return String(status).toUpperCase();
+  const s = String(status || '').toUpperCase();
+  if (s === 'PENDING' || s === 'NEW') return 'ORDER RECEIVED';
+  return s;
 }
 
 function getMilestoneIndex(status: OrderStatus): number {
@@ -79,17 +82,17 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
     }
   }, [initialOrderId]);
 
-  const handleTrackOrder = async (idToFetch?: string, emailToFetch?: string) => {
+  const handleTrackOrder = async (idToFetch?: string, emailOrPhoneToFetch?: string) => {
     const targetId = (idToFetch || orderIdInput).trim();
-    const targetEmail = (emailToFetch || emailInput).trim();
+    const targetVerification = (emailOrPhoneToFetch || emailInput).trim();
 
     if (!targetId) {
-      setError('Please enter your Order ID (e.g. ORD-98214).');
+      setError('Please enter your Order ID (e.g. KE-2026-000123).');
       return;
     }
 
-    if (!targetEmail) {
-      setError('Please enter the email address used when placing the order.');
+    if (!targetVerification) {
+      setError('Please enter the customer email address or phone number used during checkout.');
       return;
     }
 
@@ -97,12 +100,12 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
     setLoading(true);
 
     try {
-      const res = await api.trackOrder(targetId, targetEmail);
+      const res = await api.trackOrder(targetId, targetVerification);
       setTrackedOrder(res.order);
     } catch (err: any) {
       setTrackedOrder(null);
       setError(
-        err.message || 'Unable to find an order matching that ID and email. Please verify your details.'
+        err.message || 'Unable to find an order matching that ID and email/phone. Please verify your details.'
       );
     } finally {
       setLoading(false);
@@ -143,7 +146,7 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
               Track My Order
             </h2>
             <p className="text-xs sm:text-sm text-stone-500 font-light mt-1 max-w-xl">
-              Enter your Order ID and the customer email associated with your purchase to check fulfillment, courier tracking, and estimated delivery status.
+              Enter your Order ID and the customer email or phone number associated with your purchase to check fulfillment, courier tracking, and estimated delivery status.
             </p>
           </div>
 
@@ -174,21 +177,21 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
                   id="track-order-id"
                   type="text"
                   required
-                  placeholder="e.g. ORD-98214"
+                  placeholder="e.g. KE-2026-000123"
                   value={orderIdInput}
                   onChange={(e) => setOrderIdInput(e.target.value.toUpperCase())}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 bg-[#FAF8F5] text-stone-900 font-mono text-sm uppercase placeholder:font-sans placeholder:normal-case placeholder:text-stone-400 focus:outline-none focus:border-[#2A4B3C] focus:bg-white transition-all"
                 />
               </div>
               <p className="text-[11px] text-stone-500 font-light mt-1">
-                Found on your checkout confirmation screen or email receipt.
+                Found on your checkout confirmation screen or receipt.
               </p>
             </div>
 
-            {/* Email Address Input */}
+            {/* Email Address or Phone Input */}
             <div>
               <label htmlFor="track-email" className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1.5">
-                Customer Email Address <span className="text-[#2A4B3C]">*</span>
+                Customer Email or Phone <span className="text-[#2A4B3C]">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
@@ -196,16 +199,16 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
                 </div>
                 <input
                   id="track-email"
-                  type="email"
+                  type="text"
                   required
-                  placeholder="e.g. customer@example.com"
+                  placeholder="e.g. sarah@example.com or +1 555-019-2834"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 bg-[#FAF8F5] text-stone-900 text-sm placeholder:text-stone-400 focus:outline-none focus:border-[#2A4B3C] focus:bg-white transition-all"
                 />
               </div>
               <p className="text-[11px] text-stone-500 font-light mt-1">
-                Must match the email provided at checkout for verification.
+                Must match the email or phone provided at checkout.
               </p>
             </div>
           </div>

@@ -7,8 +7,9 @@
       "phone": "+1 (800) 548-2432",
       "role": "ADMIN",
       "createdAt": "2026-08-01T00:00:00Z",
-      "passwordHash": "08e0038370f9e27d05a8411aaeaaf8b14d52c9bc7cebd8b037d0b07db3ba256a76ed0b6f62d24d34c3509b659dbeeb5fa16ab2389f2cc6e4174f5574e5244998",
-      "salt": "2203c7436c8ec4771c2edcd6363083e4"
+      "passwordHash": "7d607194e95006f07b5fb9864168cd1f38777b7386ea0a2c7604144451bd47a611e26faa25a30ccb2f8c9fc20410f875c85c11481d0243d9a5ffb2e56ca6f1a0",
+      "salt": "a102f7f7de4ecb9edf8d6f4bdbbde00f",
+      "mustChangePassword": true
     },
     {
       "id": "user-customer-demo",
@@ -43,7 +44,7 @@
     "price": 29.99,
     "originalPrice": 49.99,
     "discount": 40,
-    "stock": 135,
+    "stock": 128,
     "specifications": {
       "material": "High Borosilicate Glass & Food-Grade BPA-Free PP",
       "capacity": "470 ml (16 oz)",
@@ -101,26 +102,181 @@
         "alt": "KitchEase dispenser resting on kitchen marble counter with fresh cooking ingredients",
         "order": 5,
         "isMain": false
-      },
-      {
-        "id": "img-6",
-        "url": "/images/oil_spray_action_1788685889614.jpg",
-        "caption": "Pneumatic Atomizing Mist - Broad, even coverage for cooking surfaces",
-        "alt": "Spraying fine mist of cooking oil onto cooking pan",
-        "order": 6,
-        "isMain": false
-      },
-      {
-        "id": "img-7",
-        "url": "/images/oil_pour_action_1788685906571.jpg",
-        "caption": "Precision Controlled Pour - Clean flow for sauteing and dressings",
-        "alt": "Pouring cooking oil into pan smoothly without drips",
-        "order": 7,
-        "isMain": false
       }
     ]
   },
   "orders": [
+    {
+      "productId": "prod-kitchease-01",
+      "productName": "KitchEase Oil Dispenser / Sprayer",
+      "productImage": "/images/hero.jpg",
+      "quantity": 2,
+      "unitPrice": 29.99,
+      "subtotal": 59.98,
+      "discount": 5,
+      "shipping": 0,
+      "deliveryCharge": 0,
+      "total": 54.98,
+      "totalAmount": 54.98,
+      "paymentMethod": "CASH ON DELIVERY",
+      "paymentStatus": "COD / PAYMENT PENDING",
+      "customerInformation": {
+        "fullName": "Sarah Jenkins",
+        "email": "sarah.jenkins@example.com",
+        "phone": "9876543210",
+        "address": "442 Market Street, Apt 3B",
+        "city": "San Francisco",
+        "state": "California",
+        "postalCode": "94105"
+      },
+      "status": "OUT FOR DELIVERY",
+      "orderStatus": "OUT FOR DELIVERY",
+      "id": "KE-2026-000101",
+      "orderId": "KE-2026-000101",
+      "customerName": "Sarah Jenkins",
+      "phone": "9876543210",
+      "address": "442 Market Street, Apt 3B",
+      "city": "San Francisco",
+      "state": "California",
+      "pincode": "94105",
+      "createdAt": "2026-09-10T16:32:21.899Z",
+      "updatedAt": "2026-09-10T16:33:26.415Z",
+      "timeline": [
+        {
+          "status": "ORDER RECEIVED",
+          "timestamp": "2026-09-10T16:32:21.899Z",
+          "note": "Order successfully placed. Cash on delivery confirmation received."
+        },
+        {
+          "status": "OUT FOR DELIVERY",
+          "timestamp": "2026-09-10T16:33:26.415Z",
+          "note": "Assigned to driver Dave for doorstep delivery today."
+        }
+      ]
+    },
+    {
+      "productId": "prod-kitchease-01",
+      "productName": "KitchEase Oil Dispenser / Sprayer",
+      "productImage": "/images/hero.jpg",
+      "quantity": 2,
+      "unitPrice": 29.99,
+      "discount": 5,
+      "shipping": 0,
+      "total": 54.98,
+      "customerInformation": {
+        "fullName": "Sarah Jenkins",
+        "email": "sarah.jenkins@example.com",
+        "phone": "9876543210",
+        "address": "442 Market Street, Apt 3B",
+        "city": "San Francisco",
+        "state": "California",
+        "postalCode": "94105"
+      },
+      "status": "Pending",
+      "id": "ORD-62274",
+      "createdAt": "2026-09-10T16:32:10.942Z",
+      "updatedAt": "2026-09-10T16:32:10.942Z",
+      "timeline": [
+        {
+          "status": "Pending",
+          "timestamp": "2026-09-10T16:32:10.942Z",
+          "note": "Order successfully placed by customer"
+        }
+      ]
+    },
+    {
+      "userId": "user-customer-demo",
+      "productId": "prod-kitchease-01",
+      "productName": "KitchEase Oil Dispenser / Sprayer",
+      "productImage": "/images/hero.jpg",
+      "quantity": 1,
+      "unitPrice": 29.99,
+      "discount": 0,
+      "shipping": 0,
+      "total": 29.99,
+      "customerInformation": {
+        "fullName": "Sarah Cookshuhj",
+        "email": "sarah.cooks@example.com",
+        "phone": "+1 (555) 234-8890hhh",
+        "address": "742 Evergreen Terrace",
+        "city": "Springfield",
+        "state": "IL",
+        "postalCode": "62704"
+      },
+      "status": "Pending",
+      "id": "ORD-11551",
+      "createdAt": "2026-09-10T16:20:26.258Z",
+      "updatedAt": "2026-09-10T16:20:26.258Z",
+      "timeline": [
+        {
+          "status": "Pending",
+          "timestamp": "2026-09-10T16:20:26.258Z",
+          "note": "Order successfully placed by customer"
+        }
+      ]
+    },
+    {
+      "userId": "user-admin-owner",
+      "productId": "prod-kitchease-01",
+      "productName": "KitchEase Oil Dispenser / Sprayer",
+      "productImage": "/images/hero.jpg",
+      "quantity": 1,
+      "unitPrice": 29.99,
+      "discount": 0,
+      "shipping": 0,
+      "total": 29.99,
+      "customerInformation": {
+        "fullName": "KitchEase Store Owner",
+        "email": "admin@kitchease.com",
+        "phone": "+1 (800) 548-2432",
+        "address": "jhuy",
+        "city": "vkiygj",
+        "state": "NY",
+        "postalCode": "58875"
+      },
+      "status": "Pending",
+      "id": "ORD-22022",
+      "createdAt": "2026-09-10T15:53:04.212Z",
+      "updatedAt": "2026-09-10T15:53:04.212Z",
+      "timeline": [
+        {
+          "status": "Pending",
+          "timestamp": "2026-09-10T15:53:04.212Z",
+          "note": "Order successfully placed by customer"
+        }
+      ]
+    },
+    {
+      "userId": "user-admin-owner",
+      "productId": "prod-kitchease-01",
+      "productName": "KitchEase Oil Dispenser / Sprayer",
+      "productImage": "/images/hero.jpg",
+      "quantity": 1,
+      "unitPrice": 29.99,
+      "discount": 0,
+      "shipping": 0,
+      "total": 29.99,
+      "customerInformation": {
+        "fullName": "KitchEase Store Owner",
+        "email": "admin@kitchease.com",
+        "phone": "+1 (800) 548-2432",
+        "address": "daafdaf",
+        "city": "afaf",
+        "state": "sfgdsg",
+        "postalCode": "gddg"
+      },
+      "status": "Pending",
+      "id": "ORD-58513",
+      "createdAt": "2026-09-10T15:50:54.919Z",
+      "updatedAt": "2026-09-10T15:50:54.919Z",
+      "timeline": [
+        {
+          "status": "Pending",
+          "timestamp": "2026-09-10T15:50:54.919Z",
+          "note": "Order successfully placed by customer"
+        }
+      ]
+    },
     {
       "id": "ORD-98214",
       "userId": "user-customer-demo",
@@ -404,50 +560,38 @@
     "faqs": [
       {
         "id": "faq-1",
-        "question": "What is KitchEase?",
-        "answer": "KitchEase is an authentic 2-in-1 kitchen oil bottle designed for both controlled pouring and fine atomized spraying. Made with high-grade thermal borosilicate glass and food-safe BPA-free materials, it helps you cook with better oil control and zero chemical propellants.",
-        "category": "About"
+        "question": "How does the KitchEase dual-action mechanism work?",
+        "answer": "The engineered pump head features two dedicated channels: an automatic gravity-assisted pour valve that opens when the bottle is tilted, and a high-pressure atomizing pump triggered by depressing the top lever for a fine, uniform mist.",
+        "category": "Operation"
       },
       {
         "id": "faq-2",
-        "question": "How does the spray function work?",
-        "answer": "A firm, decisive press of the top ergonomic lever pressurizes the mechanical pump chamber to create a wide, ultra-fine mist. It requires no batteries and no chemical aerosol propellants, making it ideal for air fryers, roasting vegetables, and coating skillets.",
+        "question": "How do I get the finest mist instead of a stream?",
+        "answer": "A quick, decisive press of the lever creates maximum pneumatic pressure, atomizing the oil into a wide, uniform cloud. A slow, gentle press will produce a heavier droplet stream.",
         "category": "Operation"
       },
       {
         "id": "faq-3",
-        "question": "How does the pouring function work?",
-        "answer": "Simply tilt the bottle over your pan or bowl. The gravity-assisted pour valve automatically opens to release a smooth, measured drizzle. The anti-drip rim prevents oily runs down the side of the carafe.",
-        "category": "Operation"
-      },
-      {
-        "id": "faq-4",
-        "question": "What type of oil can I use?",
-        "answer": "KitchEase works seamlessly with any standard cooking oil, including olive oil, avocado oil, canola, vegetable, sesame, and sunflower oil. Avoid viscous liquids with heavy sediment or whole herb particles that could obstruct the fine nozzle.",
+        "question": "What types of oils can I use in KitchEase?",
+        "answer": "KitchEase works with any pure cooking oil: extra virgin olive oil, avocado oil, peanut oil, canola, sunflower, and sesame oil. Do not use oils infused with herbs or garlic cloves that could clog the fine nozzle.",
         "category": "Usage"
       },
       {
-        "id": "faq-5",
-        "question": "How do I clean it?",
-        "answer": "All components twist apart in seconds. For regular maintenance, add warm water and a drop of dish soap to the glass bottle, use the included flexible bottle brush, and pump warm soapy water through the nozzle 4–5 times to flush the valve. Rinse thoroughly with clear water and air dry.",
+        "id": "faq-4",
+        "question": "How do I clean and unclog the spray nozzle?",
+        "answer": "Fill the reservoir halfway with warm water and a pump of liquid dish soap. Swirl and pump 5-8 times through the nozzle into the sink. Then flush with clean warm water. We also include a custom cleaning brush in every box.",
         "category": "Cleaning"
       },
       {
-        "id": "faq-6",
-        "question": "How do I place an order?",
-        "answer": "Click 'BUY NOW' anywhere on the website, select your desired quantity, enter your delivery address and contact details on our simple checkout form, and confirm your order. You will receive an instant order receipt and tracking link.",
-        "category": "Ordering"
-      },
-      {
-        "id": "faq-7",
-        "question": "How long does delivery take?",
-        "answer": "Orders are processed within 24 hours. Standard domestic shipping takes 2 to 4 business days with direct tracking. We offer free shipping on all orders.",
+        "id": "faq-5",
+        "question": "How long does shipping take?",
+        "answer": "Orders are processed within 24 hours. Domestic standard shipping takes 2-4 business days. Priority expedited shipping takes 1-2 business days. Tracking numbers are emailed immediately upon dispatch.",
         "category": "Shipping"
       },
       {
-        "id": "faq-8",
-        "question": "What is your return/refund policy?",
-        "answer": "We offer a 30-day no-hassle money-back guarantee and a 1-year manufacturer warranty. If you are not completely satisfied with your KitchEase bottle, contact our support team at support@kitchease.com for an immediate replacement or refund.",
+        "id": "faq-6",
+        "question": "What is your return and warranty policy?",
+        "answer": "We offer a 30-day no-questions-asked money-back guarantee and a 1-year manufacturer warranty against defects. If you are not 100% delighted, our support team will replace or refund your order.",
         "category": "Policy"
       }
     ]
@@ -458,6 +602,7 @@
     "supportPhone": "+1 (800) 548-2432",
     "freeShippingThreshold": 0,
     "currencySymbol": "$",
-    "allowGuestCheckout": true
+    "allowGuestCheckout": true,
+    "privacyPolicy": "KitchEase Privacy Policy & Customer Data Protection\n\nLast Updated: September 2026\n\nAt KitchEase, we respect and safeguard the private personal information of every customer who purchases our 2-in-1 kitchen oil dispenser and sprayer. This Privacy Policy details how customer information is collected, processed, and protected under strict privacy safeguards.\n\n1. Information We Collect\nWhen placing an order on KitchEase, we only collect the essential information required to process fulfillment and dispatch delivery:\n• Recipient Full Name\n• Delivery Street Address, City, State, and Postal Code / Pincode\n• Contact Phone Number (used exclusively for courier delivery coordination and SMS delivery updates)\n• Email Address (used exclusively for sending order receipts and live tracking links)\n\nWe do NOT collect, process, or store payment card numbers, CVVs, net banking credentials, or government identification numbers.\n\n2. Purpose and Use of Customer Data\nYour personal data is used solely for legitimate order fulfillment purposes:\n• Processing and assembling your KitchEase order\n• Generating accurate courier shipping labels and manifests\n• Transmitting automated dispatch notifications and tracking updates\n• Providing customer service assistance, returns, or warranty replacements (1-year manufacturer warranty)\n\n3. Strict Address & Phone Privacy Safeguards\n• Zero Public Address Exposure: Customer delivery addresses and phone numbers are strictly confidential and are never published or made searchable to the public or other customers.\n• Masked Order Tracking: Public self-service tracking requires dual verification (Order ID and customer email address). To prevent reconnaissance, delivery street addresses and contact phone numbers are automatically masked on tracking screens.\n• Role-Based Access Control: Full delivery addresses can only be accessed by authenticated and authorized store administrators for order fulfillment.\n\n4. Third-Party Disclosures\nWe never sell, rent, monetize, or trade your personal information with advertising brokers or data aggregators. Customer shipping data is disclosed strictly to:\n• Licensed domestic logistics and courier delivery partners solely for completing door-to-door physical parcel delivery.\n• Transaction notification service providers for sending delivery milestone alerts.\n\n5. Data Retention & Customer Rights\nOrder records are retained securely in encrypted storage for warranty verification and transaction accounting. You have the right to request access to, correction of, or deletion of your personal data at any time.\n\n6. Contact Our Privacy Officer\nFor any privacy inquiries, data deletion requests, or questions regarding our security protocols, please contact our support team at privacy@kitchease.com or support@kitchease.com."
   }
 }

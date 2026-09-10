@@ -177,14 +177,19 @@ export const api = {
   async createOrder(orderData: {
     quantity: number;
     discount?: number;
+    promoCode?: string;
+    paymentMethod?: string;
     customerInformation: {
       fullName: string;
-      email: string;
+      email?: string;
       phone: string;
-      address: string;
+      address?: string;
+      houseBuilding?: string;
+      streetArea?: string;
       city: string;
       state: string;
-      postalCode: string;
+      pincode?: string;
+      postalCode?: string;
     };
   }): Promise<{ order: Order }> {
     return request<{ order: Order }>('/api/orders', {
@@ -197,15 +202,23 @@ export const api = {
     return request<{ orders: Order[] }>('/api/orders/mine');
   },
 
-  async getOrderById(id: string, email?: string): Promise<{ order: Order }> {
-    const query = email ? `?email=${encodeURIComponent(email)}` : '';
+  async getOrderById(id: string, emailOrPhone?: string): Promise<{ order: Order }> {
+    const query = emailOrPhone
+      ? emailOrPhone.includes('@')
+        ? `?email=${encodeURIComponent(emailOrPhone)}`
+        : `?phone=${encodeURIComponent(emailOrPhone)}`
+      : '';
     return request<{ order: Order }>(`/api/orders/${id}${query}`);
   },
 
-  async trackOrder(orderId: string, email: string): Promise<{ order: Order }> {
+  async trackOrder(orderId: string, emailOrPhone: string): Promise<{ order: Order }> {
+    const isEmail = emailOrPhone.includes('@');
+    const payload = isEmail
+      ? { orderId, email: emailOrPhone }
+      : { orderId, phone: emailOrPhone };
     return request<{ order: Order }>('/api/orders/track', {
       method: 'POST',
-      body: JSON.stringify({ orderId, email }),
+      body: JSON.stringify(payload),
     });
   },
 

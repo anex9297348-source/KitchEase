@@ -461,22 +461,50 @@ api.post('/admin/upload-batch-images', adminMiddleware, (req, res) => {
 // 4. Orders
 api.post('/orders', orderLimiter, optionalAuth, (req: AuthenticatedRequest, res) => {
   try {
-    const { quantity, customerInformation, promoCode } = req.body;
+    const { quantity, customerInformation, promoCode, paymentMethod } = req.body;
     const parsedQty = Math.floor(Number(quantity) || 0);
     if (parsedQty < 1 || parsedQty > 100) {
       return res.status(400).json({ error: 'Order quantity must be between 1 and 100 bottles.' });
     }
 
-    if (
-      !customerInformation ||
-      !customerInformation.fullName?.trim() ||
-      !customerInformation.email?.trim() ||
-      !customerInformation.address?.trim() ||
-      !customerInformation.city?.trim() ||
-      !customerInformation.state?.trim() ||
-      !customerInformation.postalCode?.trim()
-    ) {
-      return res.status(400).json({ error: 'All delivery and shipping details are required.' });
+    if (!customerInformation) {
+      return res.status(400).json({ error: 'Please enter your delivery details.' });
+    }
+
+    const fullName = (customerInformation.fullName || '').trim();
+    if (!fullName || fullName.length < 2) {
+      return res.status(400).json({ error: 'Please enter your full name.' });
+    }
+
+    const rawPhone = String(customerInformation.phone || '').trim();
+    const phoneDigits = rawPhone.replace(/\D/g, '');
+    if (!rawPhone || phoneDigits.length < 10 || phoneDigits.length > 15) {
+      return res.status(400).json({ error: 'Please enter a valid phone number.' });
+    }
+
+    const houseBuilding = (customerInformation.houseBuilding || '').trim();
+    const streetArea = (customerInformation.streetArea || '').trim();
+    const providedAddress = (customerInformation.address || '').trim();
+    const fullAddress = providedAddress || (houseBuilding && streetArea ? `${houseBuilding}, ${streetArea}` : houseBuilding || streetArea);
+
+    if (!fullAddress || fullAddress.length < 5) {
+      return res.status(400).json({ error: 'Please enter your complete delivery address.' });
+    }
+
+    const city = (customerInformation.city || '').trim();
+    if (!city) {
+      return res.status(400).json({ error: 'Please enter your city.' });
+    }
+
+    const state = (customerInformation.state || '').trim();
+    if (!state) {
+      return res.status(400).json({ error: 'Please enter your state.' });
+    }
+
+    const rawPincode = String(customerInformation.pincode || customerInformation.postalCode || '').trim();
+    const cleanPincode = rawPincode.replace(/\s+/g, '');
+    if (!cleanPincode || cleanPincode.length < 5 || cleanPincode.length > 10) {
+      return res.status(400).json({ error: 'Please enter a valid 6-digit pincode.' });
     }
 
     // SANITIZATION & SECURITY: Compute canonical prices strictly server-side (prevent price tampering)
@@ -493,22 +521,36 @@ api.post('/orders', orderLimiter, optionalAuth, (req: AuthenticatedRequest, res)
     }
 
     // Optional verified coupon promo code
-    if (promoCode && String(promoCode).trim().toUpperCase() === 'KITCHEN10') {
+    if (promoCode && String(promoCode).trim().toUpperCase() === 'CHEF10') {
+      discount = Math.max(discount, 5);
+    } else if (promoCode && String(promoCode).trim().toUpperCase() === 'KITCHEN10') {
       discount = Math.max(discount, Math.round(subtotal * 0.1 * 100) / 100);
     }
 
-    const shipping = 0; // Promotional Free Insured Shipping
-    const total = Math.max(0, Math.round((subtotal - discount + shipping) * 100) / 100);
+    const deliveryCharge = 0; // Free Standard Tracked Shipping
+    const total = Math.max(0, Math.round((subtotal - discount + deliveryCharge) * 100) / 100);
+
+    const email = customerInformation.email && customerInformation.email.includes('@')
+      ? customerInformation.email.trim().toLowerCase()
+      : `${fullName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'customer'}@orders.kitchease.com`;
 
     const sanitizedCustomerInfo = {
-      fullName: customerInformation.fullName.trim(),
-      email: customerInformation.email.trim().toLowerCase(),
-      phone: customerInformation.phone ? customerInformation.phone.trim() : '',
-      address: customerInformation.address.trim(),
-      city: customerInformation.city.trim(),
-      state: customerInformation.state.trim(),
-      postalCode: customerInformation.postalCode.trim(),
+      fullName,
+      email,
+      phone: rawPhone,
+      address: fullAddress,
+      city,
+      state,
+      postalCode: cleanPincode,
     };
+
+    const selectedPaymentMethod = (paymentMethod || 'CASH ON DELIVERY').toUpperCase().includes('ONLINE')
+      ? 'ONLINE PAYMENT'
+      : 'CASH ON DELIVERY';
+
+    const initialPaymentStatus = selectedPaymentMethod === 'CASH ON DELIVERY'
+      ? 'COD / PAYMENT PENDING'
+      : 'PAYMENT PENDING';
 
     const order = db.createOrder({
       userId: req.user ? req.user.id : undefined,
@@ -517,16 +559,40 @@ api.post('/orders', orderLimiter, optionalAuth, (req: AuthenticatedRequest, res)
       productImage: product.images.find((i) => i.isMain)?.url || product.images[0]?.url || '/images/hero.jpg',
       quantity: parsedQty,
       unitPrice,
+      subtotal,
       discount,
-      shipping,
+      shipping: deliveryCharge,
+      deliveryCharge,
       total,
+      totalAmount: total,
+      paymentMethod: selectedPaymentMethod,
+      paymentStatus: initialPaymentStatus,
       customerInformation: sanitizedCustomerInfo,
-      status: 'Pending',
+      status: 'ORDER RECEIVED',
+      orderStatus: 'ORDER RECEIVED',
     });
 
-    res.status(201).json({ order });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Could not process order.' });
+    res.status(201).json({
+      order: {
+        id: order.id,
+        orderId: order.id,
+        productName: order.productName,
+        quantity: order.quantity,
+        unitPrice: order.unitPrice,
+        subtotal: order.subtotal,
+        deliveryCharge: order.deliveryCharge,
+        total: order.total,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        status: order.status,
+        customerName: order.customerName,
+        customerInformation: order.customerInformation,
+        createdAt: order.createdAt,
+      },
+    });
+  } catch (_err) {
+    res.status(500).json({ error: "We couldn't place your order right now. Please try again." });
   }
 });
 
@@ -536,36 +602,59 @@ api.get('/orders/mine', authMiddleware, (req: AuthenticatedRequest, res) => {
   res.json({ orders });
 });
 
-// Track order by Order ID and Email (Public safe lookup with rate limiting and address masking)
+// Track order by Order ID and Email or Phone (Public safe lookup with rate limiting and address masking)
 api.post('/orders/track', trackLimiter, (req, res) => {
   try {
-    const { orderId, email } = req.body;
-    if (!orderId || !email) {
-      return res.status(400).json({ error: 'Please provide both your Order ID and the customer email address used during checkout.' });
-    }
+    const { orderId, email, phone } = req.body;
+    const cleanId = String(orderId || '').trim();
+    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+    const cleanPhone = phone ? String(phone).replace(/\D/g, '') : '';
 
-    const cleanId = String(orderId).trim();
-    const cleanEmail = String(email).trim().toLowerCase();
+    if (!cleanId) {
+      return res.status(400).json({ error: 'Please provide your Order ID.' });
+    }
+    if (!cleanEmail && !cleanPhone) {
+      return res.status(400).json({
+        error: 'Please provide the email address or phone number used when placing the order.',
+      });
+    }
 
     const order = db.getOrderById(cleanId);
     if (!order) {
-      return res.status(404).json({ error: `No order found with ID "${cleanId}". Please verify your confirmation details.` });
+      return res.status(404).json({
+        error: `No order found with ID "${cleanId}". Please verify your order confirmation.`,
+      });
     }
 
     const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
-    if (orderEmail !== cleanEmail) {
-      return res.status(403).json({ error: 'The email address entered does not match the customer record on this order.' });
+    const orderPhone = (order.customerInformation?.phone || '').replace(/\D/g, '');
+
+    const emailMatches = cleanEmail && orderEmail === cleanEmail;
+    const phoneMatches =
+      cleanPhone &&
+      cleanPhone.length >= 4 &&
+      (orderPhone.endsWith(cleanPhone) || cleanPhone.endsWith(orderPhone));
+
+    if (!emailMatches && !phoneMatches) {
+      return res.status(403).json({
+        error: 'The verification details entered do not match the customer record on this order.',
+      });
     }
 
     // PRIVACY ENFORCEMENT: Mask street address and phone number to protect customer privacy
+    const maskedInfo = maskCustomerInformation(order.customerInformation);
     const maskedOrder = {
       ...order,
-      customerInformation: maskCustomerInformation(order.customerInformation),
+      customerInformation: maskedInfo,
+      customerName: maskedInfo.fullName,
+      phone: maskedInfo.phone,
+      address: maskedInfo.address,
+      pincode: maskedInfo.postalCode,
     };
 
     res.json({ order: maskedOrder, maskedForPrivacy: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to track order.' });
+  } catch (_err) {
+    res.status(500).json({ error: 'Failed to retrieve order tracking details.' });
   }
 });
 
@@ -576,7 +665,9 @@ api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found. Please verify the order ID.' });
 
   const queryEmail = req.query.email ? String(req.query.email).trim().toLowerCase() : '';
+  const queryPhone = req.query.phone ? String(req.query.phone).replace(/\D/g, '') : '';
   const orderEmail = (order.customerInformation?.email || '').trim().toLowerCase();
+  const orderPhone = (order.customerInformation?.phone || '').replace(/\D/g, '');
 
   // 1. Full unmasked order access ONLY for authenticated Store Admins
   if (req.user?.role === 'ADMIN') {
@@ -588,18 +679,27 @@ api.get('/orders/:id', optionalAuth, (req: AuthenticatedRequest, res) => {
     return res.json({ order });
   }
 
-  // 3. Customer tracking with matching email verification: returns MASKED customer details for privacy
-  if (queryEmail && queryEmail === orderEmail) {
+  // 3. Customer tracking with matching email/phone verification: returns MASKED customer details for privacy
+  const matches =
+    (queryEmail && queryEmail === orderEmail) ||
+    (queryPhone && queryPhone.length >= 4 && (orderPhone.endsWith(queryPhone) || queryPhone.endsWith(orderPhone)));
+
+  if (matches) {
+    const maskedInfo = maskCustomerInformation(order.customerInformation);
     const maskedOrder = {
       ...order,
-      customerInformation: maskCustomerInformation(order.customerInformation),
+      customerInformation: maskedInfo,
+      customerName: maskedInfo.fullName,
+      phone: maskedInfo.phone,
+      address: maskedInfo.address,
+      pincode: maskedInfo.postalCode,
     };
     return res.json({ order: maskedOrder, maskedForPrivacy: true });
   }
 
   // 4. Any unauthorized attempt to view another customer's order is strictly rejected
   return res.status(403).json({
-    error: 'Access denied. Viewing order details requires administrator login or order owner email verification.',
+    error: 'Access denied. Viewing order details requires administrator login or order owner verification.',
   });
 });
 
@@ -629,21 +729,27 @@ api.get('/admin/orders', adminMiddleware, (req, res) => {
 
 // Admin: Update Order Status
 api.put('/admin/orders/:id/status', adminMiddleware, (req, res) => {
-  const { status, note } = req.body as { status: OrderStatus; note?: string };
-  const validStatuses: OrderStatus[] = [
-    'Pending',
-    'Confirmed',
-    'Processing',
-    'Shipped',
-    'Delivered',
-    'Cancelled',
-  ];
+  const { status, note } = req.body as { status: string; note?: string };
+  const rawStatus = String(status || '').trim().toUpperCase();
 
-  if (!validStatuses.includes(status)) {
+  const normalizedMap: Record<string, string> = {
+    'NEW': 'ORDER RECEIVED',
+    'ORDER RECEIVED': 'ORDER RECEIVED',
+    'PENDING': 'ORDER RECEIVED',
+    'CONFIRMED': 'CONFIRMED',
+    'PROCESSING': 'PROCESSING',
+    'SHIPPED': 'SHIPPED',
+    'OUT FOR DELIVERY': 'OUT FOR DELIVERY',
+    'DELIVERED': 'DELIVERED',
+    'CANCELLED': 'CANCELLED',
+  };
+
+  const canonical = normalizedMap[rawStatus];
+  if (!canonical) {
     return res.status(400).json({ error: 'Invalid order status value.' });
   }
 
-  const updated = db.updateOrderStatus(req.params.id, status, note);
+  const updated = db.updateOrderStatus(req.params.id, canonical as OrderStatus, note);
   if (!updated) {
     return res.status(404).json({ error: 'Order not found.' });
   }

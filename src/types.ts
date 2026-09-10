@@ -59,14 +59,20 @@ export type OrderStatus =
   | 'Confirmed'
   | 'Processing'
   | 'Shipped'
+  | 'Out for Delivery'
   | 'Delivered'
   | 'Cancelled'
+  | 'Order Received'
+  | 'New'
   | 'PENDING'
   | 'CONFIRMED'
   | 'PROCESSING'
   | 'SHIPPED'
+  | 'OUT FOR DELIVERY'
   | 'DELIVERED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'ORDER RECEIVED'
+  | 'NEW';
 
 export interface OrderTimelineItem {
   status: OrderStatus;
@@ -86,6 +92,7 @@ export interface CustomerInformation {
 
 export interface Order {
   id: string;
+  orderId?: string;
   userId?: string;
   productId: string;
   productName: string;
@@ -93,12 +100,23 @@ export interface Order {
   productImage: string;
   quantity: number;
   unitPrice: number;
+  subtotal?: number;
   discount: number;
   shipping: number;
+  deliveryCharge?: number;
   total: number;
   totalAmount?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  customerName?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   customerInformation: CustomerInformation;
   status: OrderStatus;
+  orderStatus?: OrderStatus;
   createdAt: string;
   updatedAt: string;
   timeline: OrderTimelineItem[];

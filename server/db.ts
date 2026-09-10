@@ -874,23 +874,90 @@ class Database {
   getOrderById(id: string): Order | null {
     if (!id) return null;
     const cleanId = id.trim().toLowerCase();
-    return this.data.orders.find((o) => o.id.toLowerCase() === cleanId) || null;
+    return (
+      this.data.orders.find(
+        (o) =>
+          (o.id && o.id.toLowerCase() === cleanId) ||
+          (o.orderId && o.orderId.toLowerCase() === cleanId)
+      ) || null
+    );
+  }
+
+  private generateUniqueOrderId(): string {
+    const year = new Date().getFullYear();
+    let maxSeq = 0;
+    for (const ord of this.data.orders) {
+      const target = ord.orderId || ord.id || '';
+      const match = target.match(/KE-\d{4}-(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    }
+
+    let nextSeq = Math.max(maxSeq + 1, this.data.orders.length + 1, 101);
+    let candidate = '';
+    do {
+      const padded = String(nextSeq).padStart(6, '0');
+      candidate = `KE-${year}-${padded}`;
+      nextSeq++;
+    } while (
+      this.data.orders.some(
+        (o) =>
+          (o.id && o.id.toUpperCase() === candidate.toUpperCase()) ||
+          (o.orderId && o.orderId.toUpperCase() === candidate.toUpperCase())
+      )
+    );
+
+    return candidate;
   }
 
   createOrder(orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'timeline'>): Order {
-    const id = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
+    const id = this.generateUniqueOrderId();
     const now = new Date().toISOString();
+    const cust = orderData.customerInformation;
+    const initialStatus = orderData.orderStatus || orderData.status || 'ORDER RECEIVED';
+    const subtotal = orderData.subtotal ?? Math.round(orderData.unitPrice * orderData.quantity * 100) / 100;
+    const deliveryCharge = orderData.deliveryCharge ?? orderData.shipping ?? 0;
+    const total = orderData.total ?? Math.round((subtotal - (orderData.discount || 0) + deliveryCharge) * 100) / 100;
+    const paymentMethod = orderData.paymentMethod || 'CASH ON DELIVERY';
+    const paymentStatus = orderData.paymentStatus || 'COD / PAYMENT PENDING';
+
     const newOrder: Order = {
       ...orderData,
       id,
-      status: 'Pending',
+      orderId: id,
+      productId: orderData.productId,
+      productName: orderData.productName,
+      productImage: orderData.productImage,
+      quantity: orderData.quantity,
+      unitPrice: orderData.unitPrice,
+      subtotal,
+      discount: orderData.discount || 0,
+      shipping: deliveryCharge,
+      deliveryCharge,
+      total,
+      totalAmount: total,
+      paymentMethod,
+      paymentStatus,
+      customerName: cust.fullName,
+      phone: cust.phone,
+      address: cust.address,
+      city: cust.city,
+      state: cust.state,
+      pincode: cust.postalCode,
+      customerInformation: cust,
+      status: initialStatus,
+      orderStatus: initialStatus,
       createdAt: now,
       updatedAt: now,
       timeline: [
         {
-          status: 'Pending',
+          status: initialStatus,
           timestamp: now,
-          note: 'Order successfully placed by customer',
+          note: 'Order successfully placed. Cash on delivery confirmation received.',
         },
       ],
     };
@@ -906,12 +973,28 @@ class Database {
   }
 
   updateOrderStatus(orderId: string, newStatus: OrderStatus, note?: string): Order | null {
-    const order = this.data.orders.find((o) => o.id === orderId);
+    const cleanId = (orderId || '').trim().toLowerCase();
+    const order = this.data.orders.find(
+      (o) =>
+        (o.id && o.id.toLowerCase() === cleanId) ||
+        (o.orderId && o.orderId.toLowerCase() === cleanId)
+    );
     if (!order) return null;
 
     const now = new Date().toISOString();
     order.status = newStatus;
+    order.orderStatus = newStatus;
     order.updatedAt = now;
+
+    // Automatic COD payment reconciliation upon verified delivery
+    const upper = String(newStatus).toUpperCase();
+    if (upper === 'DELIVERED') {
+      order.paymentStatus = 'PAID (VERIFIED ON DELIVERY)';
+    } else if (upper === 'CANCELLED') {
+      order.paymentStatus = 'CANCELLED';
+    }
+
+    if (!order.timeline) order.timeline = [];
     order.timeline.push({
       status: newStatus,
       timestamp: now,
@@ -1002,11 +1085,24 @@ class Database {
       .filter((o) => o.status !== 'Cancelled')
       .reduce((sum, o) => sum + o.total, 0);
 
-    const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
-    const processingOrders = orders.filter((o) => o.status === 'Processing').length;
-    const shippedOrders = orders.filter((o) => o.status === 'Shipped').length;
-    const deliveredOrders = orders.filter((o) => o.status === 'Delivered').length;
-    const cancelledOrders = orders.filter((o) => o.status === 'Cancelled').length;
+    const isPending = (s: string) => {
+      const u = (s || '').toUpperCase();
+      return u === 'PENDING' || u === 'ORDER RECEIVED' || u === 'NEW';
+    };
+    const isConfirmed = (s: string) => (s || '').toUpperCase() === 'CONFIRMED';
+    const isProcessing = (s: string) => (s || '').toUpperCase() === 'PROCESSING';
+    const isShipped = (s: string) => {
+      const u = (s || '').toUpperCase();
+      return u === 'SHIPPED' || u === 'OUT FOR DELIVERY';
+    };
+    const isDelivered = (s: string) => (s || '').toUpperCase() === 'DELIVERED';
+    const isCancelled = (s: string) => (s || '').toUpperCase() === 'CANCELLED';
+
+    const pendingOrders = orders.filter((o) => isPending(o.status)).length;
+    const processingOrders = orders.filter((o) => isProcessing(o.status)).length;
+    const shippedOrders = orders.filter((o) => isShipped(o.status)).length;
+    const deliveredOrders = orders.filter((o) => isDelivered(o.status)).length;
+    const cancelledOrders = orders.filter((o) => isCancelled(o.status)).length;
 
     // Last 7 days orders and revenue aggregation
     const daysMap = new Map<string, { orders: number; revenue: number }>();

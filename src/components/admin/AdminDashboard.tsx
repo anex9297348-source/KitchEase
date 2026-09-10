@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   Check,
   X,
+  MapPin,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -986,78 +987,104 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       className="px-3 py-1.5 text-xs rounded-md border border-white/15 bg-[#1A1A1A] font-medium text-white/80 focus:border-[#D4AF37] focus:outline-none cursor-pointer"
                     >
                       <option value="ALL">All Statuses</option>
-                      <option value="PENDING">Pending</option>
+                      <option value="ORDER RECEIVED">Order Received (New)</option>
                       <option value="CONFIRMED">Confirmed</option>
                       <option value="PROCESSING">Processing</option>
                       <option value="SHIPPED">Shipped</option>
+                      <option value="OUT FOR DELIVERY">Out for Delivery</option>
                       <option value="DELIVERED">Delivered</option>
                       <option value="CANCELLED">Cancelled</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Orders Table */}
+                {/* Orders Table - matching Section 9 requirements */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-white/10 text-white/40 font-semibold uppercase tracking-wider text-[11px]">
                         <th className="py-3 px-3">Order ID</th>
-                        <th className="py-3 px-3">Customer</th>
-                        <th className="py-3 px-3">Qty</th>
-                        <th className="py-3 px-3">Total</th>
-                        <th className="py-3 px-3">Status</th>
                         <th className="py-3 px-3">Date</th>
+                        <th className="py-3 px-3">Product</th>
+                        <th className="py-3 px-3 text-center">Qty</th>
+                        <th className="py-3 px-3">Total</th>
+                        <th className="py-3 px-3">Payment Status</th>
+                        <th className="py-3 px-3">Order Status</th>
                         <th className="py-3 px-3 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-[#EAEAEA]">
-                      {adminOrders.map((ord) => (
-                        <tr key={ord.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-3.5 px-3 font-mono font-bold text-white">
-                            {ord.id}
-                          </td>
-                          <td className="py-3.5 px-3">
-                            <p className="font-medium text-white">{ord.customerInformation.fullName}</p>
-                            <p className="text-[11px] text-white/50">{ord.customerInformation.email}</p>
-                          </td>
-                          <td className="py-3.5 px-3 font-medium text-white/80">{ord.quantity}</td>
-                          <td className="py-3.5 px-3 font-medium text-[#D4AF37]">
-                            ${(ord.totalAmount ?? ord.total ?? 0).toFixed(2)}
-                          </td>
-                          <td className="py-3.5 px-3">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                ord.status === 'DELIVERED'
-                                  ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
-                                  : ord.status === 'CANCELLED'
-                                  ? 'bg-red-950/60 text-red-400 border border-red-800'
-                                  : ord.status === 'SHIPPED'
-                                  ? 'bg-purple-950/60 text-purple-300 border border-purple-800'
-                                  : ord.status === 'PROCESSING'
-                                  ? 'bg-blue-950/60 text-blue-300 border border-blue-800'
-                                  : 'bg-amber-950/60 text-amber-300 border border-amber-800'
-                              }`}
-                            >
-                              {ord.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-3 text-white/50">
-                            {new Date(ord.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-3.5 px-3 text-right">
-                            <button
-                              onClick={() => {
-                                setSelectedOrder(ord);
-                                setNewStatus(ord.status);
-                                setStatusNote(ord.adminNotes || '');
-                              }}
-                              className="px-3 py-1.5 rounded-md bg-[#D4AF37] text-black text-[11px] font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors"
-                            >
-                              Update
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {adminOrders.map((ord) => {
+                        const ordId = ord.orderId || ord.id;
+                        const statusUpper = (ord.orderStatus || ord.status || '').toUpperCase();
+                        const payStatus = ord.paymentStatus || (ord.paymentMethod === 'CASH ON DELIVERY' ? 'COD / PENDING' : 'PENDING');
+                        return (
+                          <tr key={ord.id} className="hover:bg-white/5 transition-colors">
+                            <td className="py-3.5 px-3 font-mono font-bold text-white whitespace-nowrap">
+                              {ordId}
+                            </td>
+                            <td className="py-3.5 px-3 text-white/50 whitespace-nowrap">
+                              {new Date(ord.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3.5 px-3">
+                              <p className="font-medium text-white truncate max-w-[180px]">
+                                {ord.productName || 'Oil Dispenser & Sprayer'}
+                              </p>
+                              <p className="text-[11px] text-white/40">
+                                {ord.customerName || ord.customerInformation.fullName}
+                              </p>
+                            </td>
+                            <td className="py-3.5 px-3 text-center font-medium text-white/80">
+                              {ord.quantity}
+                            </td>
+                            <td className="py-3.5 px-3 font-medium text-[#D4AF37] whitespace-nowrap">
+                              ${(ord.totalAmount ?? ord.total ?? 0).toFixed(2)}
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                  payStatus.includes('PAID')
+                                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                    : payStatus.includes('CANCELLED')
+                                    ? 'bg-stone-800 text-stone-400 border border-stone-700'
+                                    : 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                                }`}
+                              >
+                                {payStatus}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-3 whitespace-nowrap">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  statusUpper === 'DELIVERED'
+                                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                    : statusUpper === 'CANCELLED'
+                                    ? 'bg-red-950/60 text-red-400 border border-red-800'
+                                    : statusUpper === 'SHIPPED' || statusUpper === 'OUT FOR DELIVERY'
+                                    ? 'bg-purple-950/60 text-purple-300 border border-purple-800'
+                                    : statusUpper === 'PROCESSING' || statusUpper === 'CONFIRMED'
+                                    ? 'bg-blue-950/60 text-blue-300 border border-blue-800'
+                                    : 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                                }`}
+                              >
+                                {ord.orderStatus || ord.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                              <button
+                                onClick={() => {
+                                  setSelectedOrder(ord);
+                                  setNewStatus(ord.orderStatus || ord.status);
+                                  setStatusNote(ord.adminNotes || '');
+                                }}
+                                className="px-3 py-1.5 rounded-md bg-[#D4AF37] text-black text-[11px] font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors"
+                              >
+                                VIEW ORDER
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {adminOrders.length === 0 && (
@@ -1702,72 +1729,154 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         </div>
       </div>
 
-      {/* Order Status Update Modal */}
+      {/* Order Details & Status Update Modal (Sections 10 & 11) */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 max-w-md w-full border border-white/10 shadow-2xl space-y-5 text-[#EAEAEA]">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-normal text-white">
-                Update Order #{selectedOrder.id}
-              </h3>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-white/10 shadow-2xl space-y-6 text-[#EAEAEA] my-8">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37] block">
+                  Admin Order Inspector
+                </span>
+                <h3 className="font-display text-lg font-normal text-white">
+                  Order #{selectedOrder.orderId || selectedOrder.id}
+                </h3>
+              </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="text-white/40 hover:text-white text-xs font-bold cursor-pointer"
+                className="text-white/40 hover:text-white text-xs font-bold cursor-pointer p-1"
+                aria-label="Close modal"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-1 text-xs">
-              <p>
-                <strong className="text-white/70">Customer:</strong> {selectedOrder.customerInformation.fullName}
-              </p>
-              <p>
-                <strong className="text-white/70">Quantity:</strong> {selectedOrder.quantity} item(s)
-              </p>
-              <p>
-                <strong className="text-white/70">Amount:</strong> ${(selectedOrder.totalAmount ?? selectedOrder.total ?? 0).toFixed(2)}
-              </p>
+            {/* SECTION 10: CUSTOMER DETAILS & DELIVERY ADDRESS */}
+            <div className="p-4 rounded-2xl bg-[#1F1F1F] border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" />
+                  Customer Details &amp; Delivery Address
+                </h4>
+                <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+                  Authorized Admin View
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-white/40 block text-[11px]">Customer Name</span>
+                  <span className="font-medium text-white">
+                    {selectedOrder.customerName || selectedOrder.customerInformation.fullName}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-white/40 block text-[11px]">Phone Number</span>
+                  <span className="font-mono text-white">
+                    {selectedOrder.phone || selectedOrder.customerInformation.phone}
+                  </span>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <span className="text-white/40 block text-[11px]">Full Delivery Address</span>
+                  <p className="font-medium text-white/90">
+                    {selectedOrder.address || selectedOrder.customerInformation.address}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-white/40 block text-[11px]">City &amp; State</span>
+                  <span className="text-white/80">
+                    {selectedOrder.city || selectedOrder.customerInformation.city},{' '}
+                    {selectedOrder.state || selectedOrder.customerInformation.state}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-white/40 block text-[11px]">Pincode / Postal Code</span>
+                  <span className="font-mono font-bold text-white">
+                    {selectedOrder.pincode || selectedOrder.customerInformation.postalCode}
+                  </span>
+                </div>
+              </div>
             </div>
 
+            {/* ORDER ITEMS & PAYMENT BREAKDOWN */}
+            <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/5 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-white/60">
+                <span>Product</span>
+                <span className="font-medium text-white">
+                  {selectedOrder.productName || 'Oil Dispenser & Sprayer'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-white/60">
+                <span>Quantity</span>
+                <span className="font-medium text-white">{selectedOrder.quantity} item(s)</span>
+              </div>
+              <div className="flex justify-between items-center text-white/60">
+                <span>Payment Method</span>
+                <span className="font-medium text-white">
+                  {selectedOrder.paymentMethod || 'CASH ON DELIVERY'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-white/60">
+                <span>Payment Status</span>
+                <span className="font-bold text-[#D4AF37]">
+                  {selectedOrder.paymentStatus || 'COD / PAYMENT PENDING'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-white/10 text-sm font-bold text-white">
+                <span>Order Total</span>
+                <span className="text-[#D4AF37]">
+                  ${(selectedOrder.totalAmount ?? selectedOrder.total ?? 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* SECTION 11: UPDATE ORDER STATUS */}
             <div className="space-y-3 pt-2 border-t border-white/10">
               <div>
-                <label className="block text-xs font-medium text-white/70 mb-1">
-                  Change Fulfillment Status
+                <label className="block text-xs font-semibold uppercase tracking-wider text-white/70 mb-1.5">
+                  Update Order Status
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs font-medium focus:border-[#D4AF37] focus:outline-none cursor-pointer"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs font-medium focus:border-[#D4AF37] focus:outline-none cursor-pointer"
                 >
-                  <option value="PENDING">PENDING</option>
-                  <option value="CONFIRMED">CONFIRMED</option>
-                  <option value="PROCESSING">PROCESSING</option>
-                  <option value="SHIPPED">SHIPPED</option>
-                  <option value="DELIVERED">DELIVERED</option>
-                  <option value="CANCELLED">CANCELLED</option>
+                  <option value="ORDER RECEIVED">Order Received (New)</option>
+                  <option value="CONFIRMED">Confirmed</option>
+                  <option value="PROCESSING">Processing</option>
+                  <option value="SHIPPED">Shipped</option>
+                  <option value="OUT FOR DELIVERY">Out for Delivery</option>
+                  <option value="DELIVERED">Delivered</option>
+                  <option value="CANCELLED">Cancelled</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-white/70 mb-1">
-                  Fulfillment Notes (Visible to Customer)
+                  Fulfillment Notes (Visible to Customer in Tracking)
                 </label>
                 <textarea
                   rows={2}
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
-                  placeholder="e.g. Courier tracking #TRK-892471 via FedEx Express"
-                  className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  placeholder="e.g. Handed over to FedEx. Courier tracking #TRK-892471"
+                  className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2 text-xs font-medium text-white/60 hover:text-white cursor-pointer"
+                className="px-4 py-2.5 text-xs font-medium text-white/60 hover:text-white cursor-pointer"
               >
                 Cancel
               </button>
@@ -1775,7 +1884,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 type="button"
                 onClick={handleUpdateStatus}
                 disabled={updatingOrderStatus}
-                className="px-5 py-2 rounded-md bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-md bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors disabled:opacity-50"
               >
                 {updatingOrderStatus ? 'Updating...' : 'Save Status'}
               </button>
