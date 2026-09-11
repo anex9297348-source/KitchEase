@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { db, maskCustomerInformation, defaultPrivacyPolicy } from './db.ts';
+import { getShippingProvider } from './shipping.ts';
 import type { User, OrderStatus } from '../src/types.ts';
 
 const app = express();
@@ -749,12 +750,249 @@ api.put('/admin/orders/:id/status', adminMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Invalid order status value.' });
   }
 
-  const updated = db.updateOrderStatus(req.params.id, canonical as OrderStatus, note);
+  const updated = db.updateOrderStatus(
+    req.params.id,
+    canonical as OrderStatus,
+    note,
+    (req as AuthenticatedRequest).user?.id,
+    (req as AuthenticatedRequest).user?.name
+  );
   if (!updated) {
     return res.status(404).json({ error: 'Order not found.' });
   }
 
   res.json({ order: updated });
+});
+
+// Admin: Payments Summary
+api.get('/admin/payments/summary', adminMiddleware, (_req, res) => {
+  try {
+    const summary = db.getPaymentSummary();
+    res.json({ summary });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve payment summary' });
+  }
+});
+
+// Admin: Record COD Collection
+api.post('/admin/orders/:id/cod-collection', adminMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const result = db.recordCODCollection(req.params.id, req.user?.id, req.user?.name);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    res.json({ success: true, order: result.order });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to record COD collection' });
+  }
+});
+
+// Admin: Record COD Settlement
+api.post('/admin/orders/:id/cod-settlement', adminMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { settlementAmount, settlementDate, settlementReference, courierName, notes } = req.body;
+    if (settlementAmount === undefined || isNaN(Number(settlementAmount))) {
+      return res.status(400).json({ error: 'Valid settlementAmount is required.' });
+    }
+    if (!settlementReference || !String(settlementReference).trim()) {
+      return res.status(400).json({ error: 'Courier settlement reference or UTR number is required.' });
+    }
+
+    const result = db.recordCODSettlement(
+      req.params.id,
+      {
+        settlementAmount: Number(settlementAmount),
+        settlementDate,
+        settlementReference: String(settlementReference).trim(),
+        courierName,
+        notes,
+      },
+      req.user?.id,
+      req.user?.name
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, order: result.order });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to record COD settlement' });
+  }
+});
+
+// Admin: Update Courier & Fulfillment Details
+api.put('/admin/orders/:id/courier', adminMiddleware, (req: AuthenticatedRequest, res) => {
+  try {
+    const { courierName, trackingNumber, shipmentStatus, shippingProvider, estimatedDeliveryDate, notes } = req.body;
+    const result = db.updateCourierDetails(
+      req.params.id,
+      {
+        courierName,
+        trackingNumber,
+        shipmentStatus,
+        shippingProvider,
+        estimatedDeliveryDate,
+        notes,
+      },
+      req.user?.id,
+      req.user?.name
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, order: result.order });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update courier details' });
+  }
+});
+
+// Admin: Get Order Audit Logs
+api.get('/admin/orders/:id/audit-logs', adminMiddleware, (req, res) => {
+  try {
+    const logs = db.getAuditLogs(req.params.id);
+    res.json({ auditLogs: logs });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve audit logs' });
+  }
+});
+
+// Admin: Get All Audit Logs
+api.get('/admin/audit-logs', adminMiddleware, (_req, res) => {
+  try {
+    const logs = db.getAuditLogs();
+    res.json({ auditLogs: logs });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to retrieve audit logs' });
+  }
+});
+
+// Admin: Create Courier Shipment Manifest
+api.post('/admin/shipping/create', adminMiddleware, async (req, res) => {
+  try {
+    const { orderId, courierCode } = req.body;
+    const order = db.getOrderById(orderId);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const isCOD = order.paymentMethod?.toUpperCase().includes('COD') || order.paymentMethod?.toUpperCase().includes('CASH');
+    const provider = getShippingProvider();
+
+    const shipment = await provider.createShipment({
+      orderId: order.orderId || order.id,
+      customerName: order.customerInformation.fullName,
+      phone: order.customerInformation.phone,
+      address: order.customerInformation.address,
+      city: order.customerInformation.city,
+      state: order.customerInformation.state,
+      postalCode: order.customerInformation.postalCode,
+      isCOD,
+      codAmount: isCOD ? (order.totalAmount ?? order.total) : 0,
+      courierCode: courierCode || order.courierName,
+    });
+
+    if (shipment.success && shipment.trackingNumber) {
+      db.updateCourierDetails(order.id, {
+        courierName: shipment.courierName,
+        trackingNumber: shipment.trackingNumber,
+        shipmentStatus: 'SHIPPED',
+      });
+    }
+
+    res.json({ shipment });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to generate courier shipment' });
+  }
+});
+
+// Printable Shipping Label & Dispatch Slip
+app.get('/api/shipping/label/:trackingNumber', optionalAuth, (req: AuthenticatedRequest, res) => {
+  const trackingNumber = decodeURIComponent(req.params.trackingNumber || '');
+  const orders = db.getAllOrders();
+  const order = orders.find(
+    (o) => (o.trackingNumber && o.trackingNumber.toLowerCase() === trackingNumber.toLowerCase()) ||
+           (o.id && o.id.toLowerCase() === trackingNumber.toLowerCase()) ||
+           (o.orderId && o.orderId.toLowerCase() === trackingNumber.toLowerCase())
+  );
+
+  if (!order) {
+    return res.status(404).send('<h2>Shipping Label Not Found</h2><p>No order found matching this tracking reference.</p>');
+  }
+
+  // Only allow admin or authorized viewer
+  const isCOD = order.paymentMethod?.toUpperCase().includes('COD') || order.paymentMethod?.toUpperCase().includes('CASH');
+  const amountDue = isCOD ? (order.totalAmount ?? order.total).toFixed(2) : '0.00 (PAID)';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shipping Label - ${order.orderId || order.id}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f5; padding: 24px; color: #111; }
+    .label-box { max-width: 460px; margin: 0 auto; background: #fff; border: 2px solid #111; padding: 20px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 14px; }
+    .logo { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+    .logo span { color: #D4AF37; }
+    .type-badge { font-size: 11px; font-weight: 800; background: #111; color: #fff; padding: 4px 10px; border-radius: 3px; text-transform: uppercase; }
+    .barcode-mock { background: repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 5px, #000 5px, #000 9px, #fff 9px, #fff 11px); height: 48px; margin: 12px 0 6px 0; }
+    .tracking-num { font-size: 13px; font-weight: 700; text-align: center; letter-spacing: 2px; margin-bottom: 14px; }
+    .section { border-top: 1px dashed #bbb; padding-top: 10px; margin-top: 10px; font-size: 12px; line-height: 1.5; }
+    .section-title { font-size: 10px; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+    .cod-box { background: ${isCOD ? '#FFFBEB' : '#F0FDF4'}; border: 2px solid ${isCOD ? '#F59E0B' : '#10B981'}; padding: 10px; border-radius: 4px; margin-top: 14px; text-align: center; }
+    .cod-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: ${isCOD ? '#B45309' : '#047857'}; }
+    .cod-amount { font-size: 22px; font-weight: 900; color: #111; margin-top: 2px; }
+    .footer { font-size: 9px; color: #888; text-align: center; margin-top: 16px; border-top: 1px solid #eee; padding-top: 8px; }
+    @media print { body { background: #fff; padding: 0; } .label-box { box-shadow: none; border: 2px solid #000; } }
+  </style>
+</head>
+<body>
+  <div class="label-box">
+    <div class="header">
+      <div class="logo">KITCH<span>EASE</span></div>
+      <div class="type-badge">${isCOD ? 'COD DISPATCH' : 'PREPAID DISPATCH'}</div>
+    </div>
+    
+    <div class="barcode-mock"></div>
+    <div class="tracking-num">${order.trackingNumber || 'TRK-' + (order.orderId || order.id)}</div>
+
+    <div class="section">
+      <div class="section-title">Courier Partner</div>
+      <strong>${order.courierName || 'Standard Express Fulfillment'}</strong> &bull; Order ID: <strong>${order.orderId || order.id}</strong>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Deliver To (Customer)</div>
+      <div style="font-size: 14px; font-weight: 700;">${order.customerInformation.fullName}</div>
+      <div>${order.customerInformation.address}</div>
+      <div>${order.customerInformation.city}, ${order.customerInformation.state} - <strong>${order.customerInformation.postalCode}</strong></div>
+      <div>Phone: <strong>${order.customerInformation.phone}</strong></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Shipment Contents</div>
+      <div>${order.quantity}x KitchEase 2-in-1 Oil Dispenser &amp; Sprayer (Borosilicate Glass)</div>
+    </div>
+
+    <div class="cod-box">
+      <div class="cod-title">${isCOD ? 'Cash on Delivery (Collect From Customer)' : 'Prepaid Order - No Collection Required'}</div>
+      <div class="cod-amount">${isCOD ? '$' + amountDue : 'PAID IN FULL'}</div>
+      ${isCOD ? '<div style="font-size: 10px; color: #78350F; margin-top: 3px;">Courier Partner must collect exact cash from customer prior to package handover.</div>' : ''}
+    </div>
+
+    <div class="footer">
+      Generated securely by KitchEase E-Commerce Logistics Hub &bull; ${new Date().toLocaleDateString()}
+    </div>
+  </div>
+  <div style="text-align: center; margin-top: 14px;">
+    <button onclick="window.print()" style="padding: 8px 20px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Print Shipping Label</button>
+  </div>
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
 });
 
 // Admin: Analytics & Stats

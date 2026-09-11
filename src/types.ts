@@ -61,6 +61,10 @@ export type OrderStatus =
   | 'Shipped'
   | 'Out for Delivery'
   | 'Delivered'
+  | 'Delivery Failed'
+  | 'RTO Initiated'
+  | 'RTO in Transit'
+  | 'RTO Delivered'
   | 'Cancelled'
   | 'Order Received'
   | 'New'
@@ -70,14 +74,51 @@ export type OrderStatus =
   | 'SHIPPED'
   | 'OUT FOR DELIVERY'
   | 'DELIVERED'
+  | 'DELIVERY_FAILED'
+  | 'RTO_INITIATED'
+  | 'RTO_IN_TRANSIT'
+  | 'RTO_DELIVERED'
   | 'CANCELLED'
   | 'ORDER RECEIVED'
   | 'NEW';
 
+export type PaymentMethodType = 'COD' | 'ONLINE' | 'CASH ON DELIVERY' | 'ONLINE PAYMENT';
+
+export type PaymentStatusType =
+  | 'COD_PENDING'
+  | 'COD_COLLECTED'
+  | 'PAID'
+  | 'PAYMENT_FAILED'
+  | 'PAYMENT_REFUNDED'
+  | 'COD / PAYMENT PENDING'
+  | 'PENDING'
+  | 'PAID (VERIFIED ON DELIVERY)'
+  | 'CANCELLED';
+
+export type SettlementStatusType =
+  | 'NOT_APPLICABLE'
+  | 'PENDING'
+  | 'SETTLED'
+  | 'RECONCILIATION_REQUIRED';
+
+export type ShipmentStatusType =
+  | 'NOT_ASSIGNED'
+  | 'READY_TO_SHIP'
+  | 'SHIPPED'
+  | 'IN_TRANSIT'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'DELIVERY_FAILED'
+  | 'RTO_INITIATED'
+  | 'RTO_IN_TRANSIT'
+  | 'RTO_DELIVERED'
+  | 'RETURNED';
+
 export interface OrderTimelineItem {
-  status: OrderStatus;
+  status: OrderStatus | string;
   timestamp: string;
   note?: string;
+  actor?: string;
 }
 
 export interface CustomerInformation {
@@ -108,6 +149,22 @@ export interface Order {
   totalAmount?: number;
   paymentMethod?: string;
   paymentStatus?: string;
+  paymentAmount?: number;
+  paymentCollectedAt?: string;
+  paymentCollectedBy?: string;
+  settlementStatus?: SettlementStatusType | string;
+  settlementAmount?: number;
+  settlementDate?: string;
+  settlementReference?: string;
+  settlementNotes?: string;
+  settlementRecordedBy?: string;
+  shippingProvider?: string;
+  courierName?: string;
+  trackingNumber?: string;
+  shipmentStatus?: ShipmentStatusType | string;
+  shippedAt?: string;
+  estimatedDeliveryDate?: string;
+  deliveredAt?: string;
   customerName?: string;
   phone?: string;
   address?: string;
@@ -121,6 +178,41 @@ export interface Order {
   updatedAt: string;
   timeline: OrderTimelineItem[];
   adminNotes?: string;
+}
+
+export interface PaymentSummary {
+  totalCodOrders: number;
+  codPendingCollectionAmount: number;
+  codPendingCollectionCount: number;
+  codCollectedAmount: number;
+  codCollectedCount: number;
+  codSettlementPendingAmount: number;
+  codSettlementPendingCount: number;
+  codSettledAmount: number;
+  codSettledCount: number;
+  codReconciliationRequiredAmount: number;
+  codReconciliationRequiredCount: number;
+  totalOnlineOrders: number;
+  totalOnlineRevenue: number;
+}
+
+export interface AuditLogItem {
+  id: string;
+  action: string;
+  orderId: string;
+  adminUserId: string;
+  adminUserName?: string;
+  timestamp: string;
+  details?: any;
+  note?: string;
+}
+
+export interface RecordSettlementPayload {
+  settlementAmount: number;
+  settlementDate?: string;
+  settlementReference: string;
+  courierName?: string;
+  notes?: string;
 }
 
 export interface Review {

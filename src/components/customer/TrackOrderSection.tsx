@@ -265,7 +265,7 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
               <p className="font-semibold text-red-900">Order Verification Note</p>
               <p className="text-red-700 font-light leading-relaxed">{error}</p>
               <p className="text-[11px] text-red-600 pt-1">
-                Tip: Order IDs look like <code className="bg-red-100 px-1 py-0.5 rounded font-mono">ORD-98214</code>.
+                Tip: Order IDs look like <code className="bg-red-100 px-1 py-0.5 rounded font-mono">KE-2026-000101</code>.
               </p>
             </div>
           </div>
@@ -400,6 +400,98 @@ export const TrackOrderSection: React.FC<TrackOrderSectionProps> = ({
                 </span>
               </div>
             )}
+
+            {/* Cash on Delivery (COD) & Courier Fulfillment Status Banner */}
+            {(() => {
+              const isCod = !trackedOrder.paymentMethod ||
+                trackedOrder.paymentMethod.toUpperCase().includes('COD') ||
+                trackedOrder.paymentMethod.toUpperCase().includes('CASH');
+              const isCollectedOrPaid = trackedOrder.paymentStatus === 'COD_COLLECTED' || trackedOrder.paymentStatus === 'PAID';
+              const codAmount = (trackedOrder.totalAmount ?? trackedOrder.total ?? 0).toFixed(2);
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Payment Card */}
+                  <div
+                    className={`p-4 rounded-2xl border text-xs space-y-1.5 ${
+                      isCod
+                        ? isCollectedOrPaid
+                          ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                          : 'bg-amber-50/80 border-amber-200 text-amber-950'
+                        : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>Payment Method: {isCod ? 'Cash on Delivery (COD)' : 'Prepaid Online'}</span>
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          isCollectedOrPaid
+                            ? 'bg-emerald-200/60 text-emerald-900'
+                            : 'bg-amber-200/60 text-amber-900'
+                        }`}
+                      >
+                        {isCod ? (isCollectedOrPaid ? 'Collected at Delivery' : 'Payment Due at Delivery') : 'Paid Online'}
+                      </span>
+                    </div>
+
+                    <div className="text-sm font-bold pt-1">
+                      {isCod ? (
+                        <span>
+                          {isCollectedOrPaid ? 'Amount Collected: ' : 'COD Amount Due: '}
+                          <span className={isCollectedOrPaid ? 'text-emerald-800' : 'text-amber-900'}>
+                            ${codAmount}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-emerald-800">Total Paid: ${codAmount}</span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] opacity-90 font-light leading-relaxed">
+                      {isCod
+                        ? isCollectedOrPaid
+                          ? 'Payment has been recorded as collected by the courier partner during package delivery.'
+                          : 'Please keep the exact cash amount ready for the delivery partner when your package arrives.'
+                        : 'Your order was securely processed and paid in full at checkout.'}
+                    </p>
+                  </div>
+
+                  {/* Courier Card */}
+                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-stone-200 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold uppercase tracking-wider text-[11px] text-stone-700 flex items-center gap-1.5">
+                        <Truck className="w-3.5 h-3.5 text-[#2A4B3C]" />
+                        <span>Courier &amp; Tracking</span>
+                      </span>
+                      {trackedOrder.shipmentStatus && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-stone-200 text-stone-800">
+                          {trackedOrder.shipmentStatus.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-0.5 pt-1">
+                      <div className="text-stone-900 font-semibold">
+                        {trackedOrder.courierName || 'KitchEase Express Logistics Partner'}
+                      </div>
+                      {trackedOrder.trackingNumber ? (
+                        <div className="flex items-center gap-2 font-mono text-[11px] text-stone-600">
+                          <span>Waybill #:</span>
+                          <strong className="text-stone-900">{trackedOrder.trackingNumber}</strong>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-stone-500 font-light">
+                          Courier tracking number will be assigned as soon as the package is dispatched from our fulfillment center.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Carrier & Fulfillment Alert (if notes exist) */}
             {trackedOrder.adminNotes && (

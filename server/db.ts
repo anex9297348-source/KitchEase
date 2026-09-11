@@ -12,6 +12,10 @@ import type {
   DashboardStats,
   OrderStatus,
   CustomerInformation,
+  PaymentSummary,
+  AuditLogItem,
+  SettlementStatusType,
+  ShipmentStatusType,
 } from '../src/types.js';
 
 interface DatabaseSchema {
@@ -21,6 +25,7 @@ interface DatabaseSchema {
   reviews: Review[];
   manual: UserManualData;
   siteSettings: SiteSettings;
+  auditLogs?: AuditLogItem[];
 }
 
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -605,6 +610,36 @@ class Database {
       modified = true;
     }
 
+    if (!Array.isArray(this.data.auditLogs)) {
+      this.data.auditLogs = [];
+      modified = true;
+    }
+
+    // Ensure all existing orders have proper COD / Settlement / OrderId structure
+    for (const ord of this.data.orders) {
+      if (!ord.orderId) {
+        ord.orderId = ord.id;
+        modified = true;
+      }
+      const isCod = !ord.paymentMethod || ord.paymentMethod.toUpperCase().includes('COD') || ord.paymentMethod.toUpperCase().includes('CASH');
+      if (!ord.paymentMethod) {
+        ord.paymentMethod = isCod ? 'COD' : 'ONLINE';
+        modified = true;
+      }
+      if (!ord.paymentStatus) {
+        ord.paymentStatus = isCod ? 'COD_PENDING' : 'PAID';
+        modified = true;
+      }
+      if (!ord.settlementStatus) {
+        ord.settlementStatus = isCod ? (ord.paymentStatus === 'PAID' ? 'SETTLED' : 'PENDING') : 'NOT_APPLICABLE';
+        modified = true;
+      }
+      if (!ord.paymentAmount) {
+        ord.paymentAmount = ord.totalAmount ?? ord.total;
+        modified = true;
+      }
+    }
+
     if (modified) {
       this.save();
     }
@@ -922,8 +957,14 @@ class Database {
     const subtotal = orderData.subtotal ?? Math.round(orderData.unitPrice * orderData.quantity * 100) / 100;
     const deliveryCharge = orderData.deliveryCharge ?? orderData.shipping ?? 0;
     const total = orderData.total ?? Math.round((subtotal - (orderData.discount || 0) + deliveryCharge) * 100) / 100;
-    const paymentMethod = orderData.paymentMethod || 'CASH ON DELIVERY';
-    const paymentStatus = orderData.paymentStatus || 'COD / PAYMENT PENDING';
+    
+    const isCOD = !orderData.paymentMethod ||
+      orderData.paymentMethod.toUpperCase().includes('COD') ||
+      orderData.paymentMethod.toUpperCase().includes('CASH');
+
+    const paymentMethod = isCOD ? 'COD' : 'ONLINE';
+    const paymentStatus = isCOD ? 'COD_PENDING' : 'PAID';
+    const settlementStatus = isCOD ? 'PENDING' : 'NOT_APPLICABLE';
 
     const newOrder: Order = {
       ...orderData,
@@ -940,8 +981,11 @@ class Database {
       deliveryCharge,
       total,
       totalAmount: total,
+      paymentAmount: total,
       paymentMethod,
       paymentStatus,
+      settlementStatus,
+      shipmentStatus: 'READY_TO_SHIP',
       customerName: cust.fullName,
       phone: cust.phone,
       address: cust.address,
@@ -957,7 +1001,10 @@ class Database {
         {
           status: initialStatus,
           timestamp: now,
-          note: 'Order successfully placed. Cash on delivery confirmation received.',
+          note: isCOD
+            ? 'Order placed with Cash on Delivery (COD). Awaiting doorstep collection.'
+            : 'Order placed and paid online.',
+          actor: 'Customer Checkout',
         },
       ],
     };
@@ -968,11 +1015,22 @@ class Database {
     }
 
     this.data.orders.unshift(newOrder);
+    this.recordAuditLog('Order created', id, orderData.userId || 'guest', cust.fullName, {
+      paymentMethod,
+      paymentStatus,
+      total,
+    });
     this.save();
     return newOrder;
   }
 
-  updateOrderStatus(orderId: string, newStatus: OrderStatus, note?: string): Order | null {
+  updateOrderStatus(
+    orderId: string,
+    newStatus: OrderStatus,
+    note?: string,
+    adminUserId = 'user-admin-owner',
+    adminUserName = 'KitchEase Store Owner'
+  ): Order | null {
     const cleanId = (orderId || '').trim().toLowerCase();
     const order = this.data.orders.find(
       (o) =>
@@ -981,17 +1039,27 @@ class Database {
     );
     if (!order) return null;
 
+    const previousStatus = order.status;
     const now = new Date().toISOString();
     order.status = newStatus;
     order.orderStatus = newStatus;
     order.updatedAt = now;
 
-    // Automatic COD payment reconciliation upon verified delivery
     const upper = String(newStatus).toUpperCase();
-    if (upper === 'DELIVERED') {
-      order.paymentStatus = 'PAID (VERIFIED ON DELIVERY)';
+    if (upper === 'SHIPPED') {
+      order.shipmentStatus = 'SHIPPED';
+      if (!order.shippedAt) order.shippedAt = now;
+    } else if (upper === 'OUT FOR DELIVERY') {
+      order.shipmentStatus = 'OUT_FOR_DELIVERY';
+    } else if (upper === 'DELIVERED') {
+      order.shipmentStatus = 'DELIVERED';
+      if (!order.deliveredAt) order.deliveredAt = now;
+      // Note: Delivered does NOT automatically mark COD as settled or paid to merchant!
     } else if (upper === 'CANCELLED') {
       order.paymentStatus = 'CANCELLED';
+      if (order.settlementStatus === 'PENDING') {
+        order.settlementStatus = 'NOT_APPLICABLE';
+      }
     }
 
     if (!order.timeline) order.timeline = [];
@@ -999,10 +1067,323 @@ class Database {
       status: newStatus,
       timestamp: now,
       note: note || `Order status updated to ${newStatus}`,
+      actor: adminUserName,
+    });
+
+    this.recordAuditLog('Order status changed', order.id, adminUserId, adminUserName, {
+      from: previousStatus,
+      to: newStatus,
+      note,
     });
 
     this.save();
     return order;
+  }
+
+  recordCODCollection(
+    orderId: string,
+    adminUserId = 'user-admin-owner',
+    adminUserName = 'KitchEase Store Owner'
+  ): { success: boolean; order?: Order; error?: string } {
+    const cleanId = (orderId || '').trim().toLowerCase();
+    const order = this.data.orders.find(
+      (o) =>
+        (o.id && o.id.toLowerCase() === cleanId) ||
+        (o.orderId && o.orderId.toLowerCase() === cleanId)
+    );
+
+    if (!order) {
+      return { success: false, error: 'Order not found.' };
+    }
+
+    const isCod = order.paymentMethod?.toUpperCase().includes('COD') || order.paymentMethod?.toUpperCase().includes('CASH');
+    if (!isCod) {
+      return { success: false, error: 'This is not a Cash on Delivery order.' };
+    }
+
+    if (order.status.toUpperCase() === 'CANCELLED') {
+      return { success: false, error: 'Cannot record payment collection on a cancelled order.' };
+    }
+
+    if (order.paymentStatus === 'COD_COLLECTED' || order.paymentStatus === 'PAID') {
+      return { success: false, error: 'COD collection has already been recorded for this order.' };
+    }
+
+    const now = new Date().toISOString();
+    order.paymentStatus = 'COD_COLLECTED';
+    order.paymentCollectedAt = now;
+    order.paymentCollectedBy = adminUserName;
+    if (order.settlementStatus !== 'SETTLED') {
+      order.settlementStatus = 'PENDING';
+    }
+    order.updatedAt = now;
+
+    if (!order.timeline) order.timeline = [];
+    order.timeline.push({
+      status: order.status,
+      timestamp: now,
+      note: `COD collection recorded: Customer paid $${(order.totalAmount ?? order.total).toFixed(2)} to delivery partner.`,
+      actor: adminUserName,
+    });
+
+    this.recordAuditLog('COD collection recorded', order.id, adminUserId, adminUserName, {
+      amount: order.totalAmount ?? order.total,
+      collectedAt: now,
+    });
+
+    this.save();
+    return { success: true, order };
+  }
+
+  recordCODSettlement(
+    orderId: string,
+    data: {
+      settlementAmount: number;
+      settlementDate?: string;
+      settlementReference: string;
+      courierName?: string;
+      notes?: string;
+    },
+    adminUserId = 'user-admin-owner',
+    adminUserName = 'KitchEase Store Owner'
+  ): { success: boolean; order?: Order; error?: string } {
+    const cleanId = (orderId || '').trim().toLowerCase();
+    const order = this.data.orders.find(
+      (o) =>
+        (o.id && o.id.toLowerCase() === cleanId) ||
+        (o.orderId && o.orderId.toLowerCase() === cleanId)
+    );
+
+    if (!order) {
+      return { success: false, error: 'Order not found.' };
+    }
+
+    const amt = Number(data.settlementAmount);
+    if (isNaN(amt) || amt < 0) {
+      return { success: false, error: 'Please enter a valid numeric settlement amount.' };
+    }
+
+    if (!data.settlementReference || !data.settlementReference.trim()) {
+      return { success: false, error: 'Settlement reference or UTR transaction number is required.' };
+    }
+
+    const expected = order.totalAmount ?? order.total ?? 0;
+    const diff = Math.round((amt - expected) * 100) / 100;
+    const isExact = Math.abs(diff) < 0.01;
+
+    const now = new Date().toISOString();
+    order.settlementAmount = amt;
+    order.settlementDate = data.settlementDate || now;
+    order.settlementReference = data.settlementReference.trim();
+    order.settlementNotes = data.notes ? data.notes.trim() : '';
+    order.settlementRecordedBy = adminUserName;
+
+    if (data.courierName && data.courierName.trim()) {
+      order.courierName = data.courierName.trim();
+    }
+
+    if (isExact) {
+      order.settlementStatus = 'SETTLED';
+      order.paymentStatus = 'PAID';
+    } else {
+      // Discrepancy between expected COD collection and actual courier settlement
+      order.settlementStatus = 'RECONCILIATION_REQUIRED';
+    }
+
+    order.updatedAt = now;
+
+    if (!order.timeline) order.timeline = [];
+    order.timeline.push({
+      status: order.status,
+      timestamp: now,
+      note: isExact
+        ? `Courier remittance settled: $${amt.toFixed(2)} received (Ref: ${order.settlementReference}).`
+        : `Settlement recorded with discrepancy: Expected $${expected.toFixed(2)}, Courier remitted $${amt.toFixed(2)} (Diff: $${diff.toFixed(2)}). Status: RECONCILIATION_REQUIRED.`,
+      actor: adminUserName,
+    });
+
+    this.recordAuditLog('Settlement recorded', order.id, adminUserId, adminUserName, {
+      expectedAmount: expected,
+      settledAmount: amt,
+      difference: diff,
+      reference: order.settlementReference,
+      status: order.settlementStatus,
+    });
+
+    this.save();
+    return { success: true, order };
+  }
+
+  updateCourierDetails(
+    orderId: string,
+    data: {
+      courierName?: string;
+      trackingNumber?: string;
+      shipmentStatus?: string;
+      shippingProvider?: string;
+      estimatedDeliveryDate?: string;
+      notes?: string;
+    },
+    adminUserId = 'user-admin-owner',
+    adminUserName = 'KitchEase Store Owner'
+  ): { success: boolean; order?: Order; error?: string } {
+    const cleanId = (orderId || '').trim().toLowerCase();
+    const order = this.data.orders.find(
+      (o) =>
+        (o.id && o.id.toLowerCase() === cleanId) ||
+        (o.orderId && o.orderId.toLowerCase() === cleanId)
+    );
+
+    if (!order) {
+      return { success: false, error: 'Order not found.' };
+    }
+
+    const now = new Date().toISOString();
+    let changes: string[] = [];
+
+    if (data.courierName !== undefined && data.courierName !== order.courierName) {
+      changes.push(`Courier: ${data.courierName || 'None'}`);
+      order.courierName = data.courierName ? data.courierName.trim() : undefined;
+    }
+
+    if (data.trackingNumber !== undefined && data.trackingNumber !== order.trackingNumber) {
+      changes.push(`Tracking #: ${data.trackingNumber || 'None'}`);
+      order.trackingNumber = data.trackingNumber ? data.trackingNumber.trim() : undefined;
+    }
+
+    if (data.shipmentStatus !== undefined && data.shipmentStatus !== order.shipmentStatus) {
+      changes.push(`Shipment Status: ${data.shipmentStatus}`);
+      order.shipmentStatus = data.shipmentStatus;
+      if (data.shipmentStatus === 'SHIPPED') {
+        order.status = 'SHIPPED';
+        order.orderStatus = 'SHIPPED';
+        if (!order.shippedAt) order.shippedAt = now;
+      } else if (data.shipmentStatus === 'DELIVERED') {
+        order.status = 'DELIVERED';
+        order.orderStatus = 'DELIVERED';
+        if (!order.deliveredAt) order.deliveredAt = now;
+      }
+    }
+
+    if (data.estimatedDeliveryDate) {
+      order.estimatedDeliveryDate = data.estimatedDeliveryDate;
+    }
+
+    if (data.shippingProvider) {
+      order.shippingProvider = data.shippingProvider;
+    }
+
+    if (data.notes) {
+      order.adminNotes = data.notes;
+    }
+
+    order.updatedAt = now;
+
+    if (changes.length > 0) {
+      if (!order.timeline) order.timeline = [];
+      order.timeline.push({
+        status: order.status,
+        timestamp: now,
+        note: `Fulfillment details updated: ${changes.join(', ')}`,
+        actor: adminUserName,
+      });
+
+      this.recordAuditLog('Courier details updated', order.id, adminUserId, adminUserName, {
+        changes,
+        courier: order.courierName,
+        trackingNumber: order.trackingNumber,
+      });
+    }
+
+    this.save();
+    return { success: true, order };
+  }
+
+  getPaymentSummary(): PaymentSummary {
+    const orders = this.data.orders.filter((o) => o.status !== 'Cancelled');
+    const isCod = (o: Order) =>
+      o.paymentMethod?.toUpperCase().includes('COD') || o.paymentMethod?.toUpperCase().includes('CASH');
+
+    const codOrders = orders.filter(isCod);
+    const onlineOrders = orders.filter((o) => !isCod(o));
+
+    // COD Pending Collection: COD orders not yet collected by courier
+    const codPendingCollection = codOrders.filter(
+      (o) => !o.paymentStatus || o.paymentStatus === 'COD_PENDING' || o.paymentStatus.includes('PENDING')
+    );
+
+    // COD Collected: courier has collected from customer (collected or settled)
+    const codCollected = codOrders.filter(
+      (o) => o.paymentStatus === 'COD_COLLECTED' || o.paymentStatus === 'PAID'
+    );
+
+    // Settlement Pending: Collected from customer, but courier has NOT yet remitted to merchant
+    const codSettlementPending = codOrders.filter(
+      (o) => o.paymentStatus === 'COD_COLLECTED' && (!o.settlementStatus || o.settlementStatus === 'PENDING')
+    );
+
+    // COD Settled: courier has remitted money to merchant
+    const codSettled = codOrders.filter((o) => o.settlementStatus === 'SETTLED');
+
+    // COD Reconciliation Required: Discrepancy between expected and remitted
+    const codRecon = codOrders.filter((o) => o.settlementStatus === 'RECONCILIATION_REQUIRED');
+
+    const sumTotal = (arr: Order[]) =>
+      Math.round(arr.reduce((s, o) => s + (o.totalAmount ?? o.total ?? 0), 0) * 100) / 100;
+    const sumSettled = (arr: Order[]) =>
+      Math.round(arr.reduce((s, o) => s + (o.settlementAmount ?? o.totalAmount ?? o.total ?? 0), 0) * 100) / 100;
+
+    return {
+      totalCodOrders: codOrders.length,
+      codPendingCollectionAmount: sumTotal(codPendingCollection),
+      codPendingCollectionCount: codPendingCollection.length,
+      codCollectedAmount: sumTotal(codCollected),
+      codCollectedCount: codCollected.length,
+      codSettlementPendingAmount: sumTotal(codSettlementPending),
+      codSettlementPendingCount: codSettlementPending.length,
+      codSettledAmount: sumSettled(codSettled),
+      codSettledCount: codSettled.length,
+      codReconciliationRequiredAmount: sumTotal(codRecon),
+      codReconciliationRequiredCount: codRecon.length,
+      totalOnlineOrders: onlineOrders.length,
+      totalOnlineRevenue: sumTotal(onlineOrders),
+    };
+  }
+
+  recordAuditLog(
+    action: string,
+    orderId: string,
+    adminUserId: string,
+    adminUserName?: string,
+    details?: any
+  ): void {
+    if (!Array.isArray(this.data.auditLogs)) {
+      this.data.auditLogs = [];
+    }
+
+    this.data.auditLogs.unshift({
+      id: `audit-${crypto.randomUUID().slice(0, 8)}`,
+      action,
+      orderId,
+      adminUserId,
+      adminUserName,
+      timestamp: new Date().toISOString(),
+      details,
+    });
+
+    // Cap audit log length to latest 500 records
+    if (this.data.auditLogs.length > 500) {
+      this.data.auditLogs = this.data.auditLogs.slice(0, 500);
+    }
+  }
+
+  getAuditLogs(orderId?: string): AuditLogItem[] {
+    const logs = Array.isArray(this.data.auditLogs) ? this.data.auditLogs : [];
+    if (orderId) {
+      const cleanId = orderId.trim().toLowerCase();
+      return logs.filter((l) => l.orderId.toLowerCase() === cleanId);
+    }
+    return logs;
   }
 
   // Reviews

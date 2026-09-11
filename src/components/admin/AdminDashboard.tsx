@@ -33,6 +33,11 @@ import {
   Check,
   X,
   MapPin,
+  Download,
+  ArrowUpDown,
+  FileSpreadsheet,
+  Banknote,
+  Printer,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,6 +54,9 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { useStore } from '../../context/StoreContext.tsx';
 import { api } from '../../services/api.ts';
 import { PhotoUploaderModal } from '../common/PhotoUploaderModal.tsx';
+import { PaymentsDashboard } from './PaymentsDashboard.tsx';
+import { CODSettlementModal } from './CODSettlementModal.tsx';
+import { OrderPaymentDetailsModal } from './OrderPaymentDetailsModal.tsx';
 import type {
   Order,
   OrderStatus,
@@ -68,8 +76,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const { product, images, manual, reviews, settings, refreshAll } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'orders' | 'customers' | 'product' | 'images' | 'manual' | 'reviews' | 'settings'
+    'overview' | 'orders' | 'payments' | 'customers' | 'product' | 'images' | 'manual' | 'reviews' | 'settings'
   >('overview');
+  const [codSettlementOrder, setCodSettlementOrder] = useState<Order | null>(null);
+  const [orderDossierOrder, setOrderDossierOrder] = useState<Order | null>(null);
 
   // Stats
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -79,9 +89,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [orderSearch, setOrderSearch] = useState<string>('');
+  const [orderSort, setOrderSort] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<OrderStatus>('PROCESSING');
   const [statusNote, setStatusNote] = useState<string>('');
+  const [courierName, setCourierName] = useState<string>('');
+  const [courierTracking, setCourierTracking] = useState<string>('');
   const [updatingOrderStatus, setUpdatingOrderStatus] = useState(false);
 
   // Customers
@@ -361,16 +374,104 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     );
   }
 
+  // Sorting and filtering orders
+  const sortedAndFilteredOrders = React.useMemo(() => {
+    return [...adminOrders].sort((a, b) => {
+      if (orderSort === 'date-desc') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (orderSort === 'date-asc') {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (orderSort === 'amount-desc') {
+        return (b.totalAmount ?? b.total ?? 0) - (a.totalAmount ?? a.total ?? 0);
+      }
+      if (orderSort === 'amount-asc') {
+        return (a.totalAmount ?? a.total ?? 0) - (b.totalAmount ?? b.total ?? 0);
+      }
+      return 0;
+    });
+  }, [adminOrders, orderSort]);
+
+  // CSV Export feature
+  const handleExportCSV = () => {
+    if (sortedAndFilteredOrders.length === 0) return;
+    const headers = [
+      'Order ID',
+      'Date',
+      'Customer Name',
+      'Customer Phone',
+      'Customer Email',
+      'Full Address',
+      'City',
+      'State',
+      'Postal Code',
+      'Product Name',
+      'Quantity',
+      'Unit Price',
+      'Subtotal',
+      'Discount',
+      'Shipping',
+      'Total Amount',
+      'Payment Method',
+      'Payment Status',
+      'Order Status',
+      'Admin Notes',
+    ];
+
+    const rows = sortedAndFilteredOrders.map((ord) => [
+      `"${(ord.orderId || ord.id).replace(/"/g, '""')}"`,
+      `"${new Date(ord.createdAt).toISOString()}"`,
+      `"${(ord.customerName || ord.customerInformation?.fullName || '').replace(/"/g, '""')}"`,
+      `"${(ord.phone || ord.customerInformation?.phone || '').replace(/"/g, '""')}"`,
+      `"${(ord.customerInformation?.email || '').replace(/"/g, '""')}"`,
+      `"${(ord.address || ord.customerInformation?.address || '').replace(/"/g, '""')}"`,
+      `"${(ord.city || ord.customerInformation?.city || '').replace(/"/g, '""')}"`,
+      `"${(ord.state || ord.customerInformation?.state || '').replace(/"/g, '""')}"`,
+      `"${(ord.pincode || ord.customerInformation?.postalCode || '').replace(/"/g, '""')}"`,
+      `"${(ord.productName || 'Oil Dispenser & Sprayer').replace(/"/g, '""')}"`,
+      ord.quantity,
+      (ord.unitPrice || 29.99).toFixed(2),
+      (ord.subtotal || 0).toFixed(2),
+      (ord.discount || 0).toFixed(2),
+      (ord.shipping || ord.deliveryCharge || 0).toFixed(2),
+      (ord.totalAmount ?? ord.total ?? 0).toFixed(2),
+      `"${(ord.paymentMethod || 'CASH ON DELIVERY').replace(/"/g, '""')}"`,
+      `"${(ord.paymentStatus || 'COD / PENDING').replace(/"/g, '""')}"`,
+      `"${(ord.orderStatus || ord.status || '').replace(/"/g, '""')}"`,
+      `"${(ord.adminNotes || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `kitchease-orders-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Update order status handler
   const handleUpdateStatus = async () => {
     if (!selectedOrder) return;
     setUpdatingOrderStatus(true);
     try {
-      const res = await api.updateOrderStatus(selectedOrder.id, newStatus, statusNote);
+      const parts: string[] = [];
+      if (courierName.trim()) parts.push(`Courier: ${courierName.trim()}`);
+      if (courierTracking.trim()) parts.push(`Tracking #: ${courierTracking.trim()}`);
+      if (statusNote.trim()) parts.push(statusNote.trim());
+      const finalNote = parts.join(' | ');
+
+      const res = await api.updateOrderStatus(selectedOrder.id, newStatus, finalNote || undefined);
       setSelectedOrder(res.order);
       await loadOrders();
       await loadStats();
       setStatusNote('');
+      setCourierName('');
+      setCourierTracking('');
     } catch (err) {
       console.error(err);
     } finally {
@@ -747,6 +848,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </button>
 
               <button
+                onClick={() => setActiveTab('payments')}
+                className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
+                  activeTab === 'payments'
+                    ? 'bg-[#D4AF37] text-black font-bold'
+                    : 'text-white/70 hover:bg-white/5'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  <Banknote className="w-4 h-4 text-emerald-400" />
+                  <span>Payments &amp; COD</span>
+                </span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+
+              <button
                 onClick={() => setActiveTab('customers')}
                 className={`w-full p-3 rounded-xl text-left text-xs font-semibold uppercase tracking-wider flex items-center justify-between transition-colors cursor-pointer ${
                   activeTab === 'customers'
@@ -964,20 +1080,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             {activeTab === 'orders' && (
               <div className="bg-[#151515] rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <h2 className="font-display text-xl font-normal text-[#EAEAEA]">
-                    Order Management
-                  </h2>
+                  <div>
+                    <h2 className="font-display text-xl font-normal text-[#EAEAEA]">
+                      Order Management
+                    </h2>
+                    <p className="text-xs text-white/50 mt-0.5">
+                      Showing {sortedAndFilteredOrders.length} order{sortedAndFilteredOrders.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
 
-                  {/* Search and filter controls */}
-                  <div className="flex flex-wrap items-center gap-3">
+                  {/* Search, Sort, Filter, and Export controls */}
+                  <div className="flex flex-wrap items-center gap-2.5">
                     <div className="relative">
                       <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Search orders..."
+                        placeholder="Search orders, names, IDs..."
                         value={orderSearch}
                         onChange={(e) => setOrderSearch(e.target.value)}
-                        className="pl-9 pr-3 py-1.5 text-xs rounded-md border border-white/15 bg-[#1A1A1A] text-white placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                        className="pl-9 pr-3 py-1.5 text-xs rounded-md border border-white/15 bg-[#1A1A1A] text-white placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none w-44 sm:w-52"
                       />
                     </div>
 
@@ -995,6 +1116,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       <option value="DELIVERED">Delivered</option>
                       <option value="CANCELLED">Cancelled</option>
                     </select>
+
+                    <select
+                      value={orderSort}
+                      onChange={(e) => setOrderSort(e.target.value as any)}
+                      className="px-3 py-1.5 text-xs rounded-md border border-white/15 bg-[#1A1A1A] font-medium text-white/80 focus:border-[#D4AF37] focus:outline-none cursor-pointer"
+                      title="Sort Orders"
+                    >
+                      <option value="date-desc">Newest First</option>
+                      <option value="date-asc">Oldest First</option>
+                      <option value="amount-desc">Amount: High to Low</option>
+                      <option value="amount-asc">Amount: Low to High</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={handleExportCSV}
+                      disabled={sortedAndFilteredOrders.length === 0}
+                      className="px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/15 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Export filtered orders to CSV"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1014,7 +1158,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-[#EAEAEA]">
-                      {adminOrders.map((ord) => {
+                      {sortedAndFilteredOrders.map((ord) => {
                         const ordId = ord.orderId || ord.id;
                         const statusUpper = (ord.orderStatus || ord.status || '').toUpperCase();
                         const payStatus = ord.paymentStatus || (ord.paymentMethod === 'CASH ON DELIVERY' ? 'COD / PENDING' : 'PENDING');
@@ -1041,17 +1185,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                               ${(ord.totalAmount ?? ord.total ?? 0).toFixed(2)}
                             </td>
                             <td className="py-3.5 px-3 whitespace-nowrap">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                  payStatus.includes('PAID')
-                                    ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
-                                    : payStatus.includes('CANCELLED')
-                                    ? 'bg-stone-800 text-stone-400 border border-stone-700'
-                                    : 'bg-amber-950/60 text-amber-300 border border-amber-800'
-                                }`}
-                              >
-                                {payStatus}
-                              </span>
+                              <div className="space-y-1">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    payStatus.includes('PAID') || payStatus.includes('COLLECTED')
+                                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
+                                      : payStatus.includes('CANCELLED')
+                                      ? 'bg-stone-800 text-stone-400 border border-stone-700'
+                                      : 'bg-amber-950/60 text-amber-300 border border-amber-800'
+                                  }`}
+                                >
+                                  {payStatus}
+                                </span>
+                                {ord.settlementStatus && (
+                                  <span
+                                    className={`block text-[9px] font-semibold uppercase tracking-wider ${
+                                      ord.settlementStatus === 'SETTLED'
+                                        ? 'text-emerald-400'
+                                        : ord.settlementStatus === 'RECONCILIATION_REQUIRED'
+                                        ? 'text-red-400'
+                                        : ord.settlementStatus === 'COD_COLLECTED'
+                                        ? 'text-blue-400'
+                                        : 'text-stone-400'
+                                    }`}
+                                  >
+                                    {ord.settlementStatus.replace(/_/g, ' ')}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3.5 px-3 whitespace-nowrap">
                               <span
@@ -1071,29 +1232,57 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                               </span>
                             </td>
                             <td className="py-3.5 px-3 text-right whitespace-nowrap">
-                              <button
-                                onClick={() => {
-                                  setSelectedOrder(ord);
-                                  setNewStatus(ord.orderStatus || ord.status);
-                                  setStatusNote(ord.adminNotes || '');
-                                }}
-                                className="px-3 py-1.5 rounded-md bg-[#D4AF37] text-black text-[11px] font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors"
-                              >
-                                VIEW ORDER
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrder(ord);
+                                    setNewStatus(ord.orderStatus || ord.status);
+                                    setStatusNote(ord.adminNotes || '');
+                                    setCourierName(ord.courierName || '');
+                                    setCourierTracking(ord.trackingNumber || '');
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-md bg-[#D4AF37] text-black text-[11px] font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors"
+                                >
+                                  VIEW
+                                </button>
+                                <button
+                                  onClick={() => setOrderDossierOrder(ord)}
+                                  className="p-1.5 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 text-stone-300 hover:text-white transition-colors cursor-pointer"
+                                  title="Payment & Fulfillment Dossier"
+                                >
+                                  <Banknote className="w-3.5 h-3.5" />
+                                </button>
+                                <a
+                                  href={`/api/shipping/label/${encodeURIComponent(ord.trackingNumber || ord.orderId || ord.id)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 text-stone-300 hover:text-white transition-colors cursor-pointer"
+                                  title="Print Courier Shipping Label"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
                             </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
-                  {adminOrders.length === 0 && (
+                  {sortedAndFilteredOrders.length === 0 && (
                     <div className="py-12 text-center text-white/40 text-xs">
                       No orders found matching criteria.
                     </div>
                   )}
                 </div>
               </div>
+            )}
+
+            {/* SUB-VIEW: PAYMENTS & COD SETTLEMENT */}
+            {activeTab === 'payments' && (
+              <PaymentsDashboard
+                orders={adminOrders}
+                onRefreshOrders={loadOrders}
+              />
             )}
 
             {/* SUB-VIEW 3: CUSTOMERS */}
@@ -1836,11 +2025,104 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
               </div>
             </div>
 
-            {/* SECTION 11: UPDATE ORDER STATUS */}
-            <div className="space-y-3 pt-2 border-t border-white/10">
+            {/* COD & COURIER SETTLEMENT RECONCILIATION DOSSIER */}
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+                  <Banknote className="w-4 h-4" />
+                  <span>Doorstep Collection &amp; Remittance</span>
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  selectedOrder.settlementStatus === 'SETTLED'
+                    ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800'
+                    : selectedOrder.settlementStatus === 'RECONCILIATION_REQUIRED'
+                    ? 'bg-red-950/70 text-red-400 border border-red-800'
+                    : 'bg-white/10 text-stone-300'
+                }`}>
+                  {selectedOrder.settlementStatus?.replace(/_/g, ' ') || 'PENDING COLLECTION'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-stone-300 text-[11px]">
+                <div>
+                  <span className="text-stone-500 block">Courier Partner:</span>
+                  <span className="font-semibold text-white">{selectedOrder.courierName || 'Standard Express'}</span>
+                </div>
+                <div>
+                  <span className="text-stone-500 block">Waybill / Tracking:</span>
+                  <span className="font-mono text-white">{selectedOrder.trackingNumber || 'Not assigned'}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ord = selectedOrder;
+                    setSelectedOrder(null);
+                    setOrderDossierOrder(ord);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span>Open Full Audit &amp; Settlement Dossier</span>
+                </button>
+
+                <a
+                  href={`/api/shipping/label/${encodeURIComponent(selectedOrder.trackingNumber || selectedOrder.orderId || selectedOrder.id)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span>Print Label &amp; Slip</span>
+                </a>
+
+                {selectedOrder.paymentStatus === 'COD_COLLECTED' && selectedOrder.settlementStatus !== 'SETTLED' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ord = selectedOrder;
+                      setSelectedOrder(null);
+                      setCodSettlementOrder(ord);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-[#D4AF37] hover:bg-[#E5C158] text-black text-[11px] font-bold uppercase cursor-pointer"
+                  >
+                    Mark Settled
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ORDER TIMELINE HISTORY (AUDIT TRAIL) */}
+            {selectedOrder.timeline && selectedOrder.timeline.length > 0 && (
+              <div className="p-4 rounded-2xl bg-[#1A1A1A] border border-white/5 space-y-2.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white/50 block">
+                  Order Status Audit History ({selectedOrder.timeline.length})
+                </span>
+                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                  {selectedOrder.timeline.map((item, idx) => (
+                    <div key={idx} className="p-2 rounded-xl bg-[#151515] border border-white/5 text-[11px] space-y-0.5">
+                      <div className="flex items-center justify-between text-white/50">
+                        <span className="font-bold text-[#D4AF37] uppercase">{item.status}</span>
+                        <span>{new Date(item.timestamp).toLocaleString()}</span>
+                      </div>
+                      {item.note && <p className="text-white/80 font-light">{item.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 11: UPDATE ORDER STATUS & COURIER DISPATCH */}
+            <div className="space-y-3.5 pt-2 border-t border-white/10">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] block">
+                Update Order Status &amp; Courier Dispatch
+              </span>
+
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white/70 mb-1.5">
-                  Update Order Status
+                <label className="block text-xs font-medium text-white/70 mb-1">
+                  New Order Status
                 </label>
                 <select
                   value={newStatus}
@@ -1857,15 +2139,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 </select>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-white/70 mb-1">
+                    Courier Partner (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. FedEx, Blue Dart, Delhivery"
+                    value={courierName}
+                    onChange={(e) => setCourierName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-white/70 mb-1">
+                    Courier Tracking # (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. TRK-892471934"
+                    value={courierTracking}
+                    onChange={(e) => setCourierTracking(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-white/70 mb-1">
-                  Fulfillment Notes (Visible to Customer in Tracking)
+                  Dispatch / Customer Tracking Note
                 </label>
                 <textarea
                   rows={2}
                   value={statusNote}
                   onChange={(e) => setStatusNote(e.target.value)}
-                  placeholder="e.g. Handed over to FedEx. Courier tracking #TRK-892471"
+                  placeholder="e.g. Dispatched from fulfillment warehouse. Expected delivery in 48 hours."
                   className="w-full px-3 py-2 rounded-lg border border-white/15 bg-[#1A1A1A] text-white text-xs placeholder:text-white/30 focus:border-[#D4AF37] focus:outline-none resize-none"
                 />
               </div>
@@ -1886,12 +2196,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                 disabled={updatingOrderStatus}
                 className="px-6 py-2.5 rounded-md bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-[#E5C158] cursor-pointer transition-colors disabled:opacity-50"
               >
-                {updatingOrderStatus ? 'Updating...' : 'Save Status'}
+                {updatingOrderStatus ? 'Updating...' : 'Save & Publish Status'}
               </button>
             </div>
           </div>
         </div>
       )}
+      {/* Global Modals for COD Settlement & Dossier */}
+      <CODSettlementModal
+        order={codSettlementOrder}
+        isOpen={!!codSettlementOrder}
+        onClose={() => setCodSettlementOrder(null)}
+        onSuccess={(_updated) => {
+          loadOrders();
+          loadStats();
+        }}
+      />
+
+      <OrderPaymentDetailsModal
+        order={orderDossierOrder}
+        isOpen={!!orderDossierOrder}
+        onClose={() => setOrderDossierOrder(null)}
+        onRefresh={() => {
+          loadOrders();
+          loadStats();
+        }}
+        onOpenSettlement={(ord) => {
+          setOrderDossierOrder(null);
+          setCodSettlementOrder(ord);
+        }}
+      />
     </div>
   );
 };

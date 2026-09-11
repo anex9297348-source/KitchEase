@@ -8,6 +8,9 @@ import type {
   SiteSettings,
   DashboardStats,
   OrderStatus,
+  PaymentSummary,
+  AuditLogItem,
+  RecordSettlementPayload,
 } from '../types.ts';
 
 const TOKEN_KEY = 'kitchease_token';
@@ -238,6 +241,55 @@ export const api = {
     return request<{ order: Order }>(`/api/admin/orders/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status, note }),
+    });
+  },
+
+  async getPaymentSummary(): Promise<{ summary: PaymentSummary }> {
+    return request<{ summary: PaymentSummary }>('/api/admin/payments/summary');
+  },
+
+  async recordCODCollection(orderId: string): Promise<{ success: boolean; order: Order }> {
+    return request<{ success: boolean; order: Order }>(`/api/admin/orders/${orderId}/cod-collection`, {
+      method: 'POST',
+    });
+  },
+
+  async recordCODSettlement(orderId: string, payload: RecordSettlementPayload): Promise<{ success: boolean; order: Order }> {
+    return request<{ success: boolean; order: Order }>(`/api/admin/orders/${orderId}/cod-settlement`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateCourierDetails(
+    orderId: string,
+    payload: {
+      courierName?: string;
+      trackingNumber?: string;
+      shipmentStatus?: string;
+      shippingProvider?: string;
+      estimatedDeliveryDate?: string;
+      notes?: string;
+    }
+  ): Promise<{ success: boolean; order: Order }> {
+    return request<{ success: boolean; order: Order }>(`/api/admin/orders/${orderId}/courier`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getOrderAuditLogs(orderId: string): Promise<{ auditLogs: AuditLogItem[] }> {
+    return request<{ auditLogs: AuditLogItem[] }>(`/api/admin/orders/${orderId}/audit-logs`);
+  },
+
+  async getAllAuditLogs(): Promise<{ auditLogs: AuditLogItem[] }> {
+    return request<{ auditLogs: AuditLogItem[] }>('/api/admin/audit-logs');
+  },
+
+  async createShipmentManifest(orderId: string, courierCode?: string): Promise<{ shipment: any }> {
+    return request<{ shipment: any }>('/api/admin/shipping/create', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, courierCode }),
     });
   },
 
